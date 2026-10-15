@@ -1,7 +1,8 @@
-# chat-adapter-zoom
+# zoom-chat-adapter
 
-[![npm version](https://img.shields.io/npm/v/chat-adapter-zoom)](https://www.npmjs.com/package/chat-adapter-zoom)
-[![npm downloads](https://img.shields.io/npm/dm/chat-adapter-zoom)](https://www.npmjs.com/package/chat-adapter-zoom)
+[![npm version](https://img.shields.io/npm/v/zoom-chat-adapter)](https://www.npmjs.com/package/zoom-chat-adapter)
+[![npm downloads](https://img.shields.io/npm/dm/zoom-chat-adapter)](https://www.npmjs.com/package/zoom-chat-adapter)
+[![GitHub](https://img.shields.io/badge/source-GitHub-blue?logo=github)](https://github.com/aradhyacp/zoom-chat-adapter)
 
 > **Community adapter** — This package is a community-maintained Zoom adapter for Chat SDK. It is not an official `@chat-adapter/*` package.
 
@@ -10,14 +11,14 @@ Zoom Team Chat adapter for [Chat SDK](https://chat-sdk.dev) — send and receive
 ## Installation
 
 ```bash
-pnpm add chat-adapter-zoom chat @chat-adapter/shared
+pnpm add zoom-chat-adapter chat @chat-adapter/shared
 ```
 
 ## Usage
 
 ```typescript
 import { Chat } from "chat";
-import { createZoomAdapter } from "chat-adapter-zoom";
+import { createZoomAdapter } from "zoom-chat-adapter";
 
 const bot = new Chat({
   userName: "mybot",

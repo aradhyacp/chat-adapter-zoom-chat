@@ -1,4 +1,4 @@
-# Contributing to chat-adapter-zoom
+# Contributing to zoom-chat-adapter
 
 Thanks for helping improve this community-maintained Zoom adapter for Chat SDK! This guide covers local setup, verification, and how to submit changes.
 
@@ -73,7 +73,7 @@ Examples: `feat: support message reactions`, `fix: refresh OAuth token before ex
 
 Include:
 
-- Package version (`chat-adapter-zoom`), `chat` SDK version, Node version
+- Package version (`zoom-chat-adapter`), `chat` SDK version, Node version
 - Minimal reproduction (config + webhook payload with secrets redacted)
 - Relevant logs — on webhook verification failures, the adapter logs raw body hex to aid diagnosis
 - For suspected Zoom platform bugs, reference any Zoom support ticket IDs (e.g. ZOOM-506645 for the Unicode HMAC issue)
