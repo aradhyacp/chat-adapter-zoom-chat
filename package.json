@@ -1,9 +1,19 @@
 {
   "name": "zoom-chat-adapter",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Zoom Team Chat adapter for chat-sdk",
   "keywords": [
     "chat",
+    "chat-sdk",
+    "chat-adapter",
+    "chat-adapter-sdk",
+    "chat-adapter-sdk-zoom",
+    "chat-adapter-sdk-zoom-team-chat",
+    "zoom-chat-adapter",
+    "zoom-chat",
+    "zoom-team-chat",
+    "agents",
+    "apps",
     "zoom",
     "bot",
     "adapter",
@@ -39,6 +49,7 @@
     "dev": "tsup --watch",
     "fix": "ultracite fix",
     "prepare": "husky",
+    "prepublish": "pnpm build && pnpm test && pnpm check && pnpm typecheck && echo \"allowed to publish\"",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
