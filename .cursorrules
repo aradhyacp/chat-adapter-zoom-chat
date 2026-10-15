@@ -1,0 +1,27 @@
+---
+description: Guidelines for generating structured, multi-level Git commit messages.
+globs: *
+---
+
+When generating Git commit messages for this project, always adhere to the following multi-level structure:
+
+1. **Format:** Use the Conventional Commits specification.
+2. **First Line (Header):** 
+   - Format: `<type>(<scope>): <short summary>` (max 50 characters).
+   - Use lowercase, imperative mood (e.g., "add feature", not "added feature").
+   - Leave a blank line after the header.
+3. **Body (Multi-level bullets):**
+   - Provide a concise paragraph explaining the *why* and *what* if necessary.
+   - Use a clear bulleted list for specific changes.
+   - For complex changes, use sub-bullets to break down the technical implementations.
+
+### Commit Message Blueprint Example:
+feat(auth): implement OAuth2 Google login
+
+Introduce secure third-party authentication to replace the legacy email/password form.
+
+- Added passport-google-oauth20 strategy
+  - Configured environment variables for Client ID and Secret
+  - Implemented secure token rotation mechanism
+- Created dedicated frontend login button component
+- Updated user database schema to store provider-specific IDs
