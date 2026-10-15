@@ -224,6 +224,8 @@ Examples:
 
 Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, and pull request guidelines.
 
+This project uses [Ultracite](https://www.ultracite.ai/) ([Biome](https://biomejs.dev/)) for linting and formatting, enforced by a [Husky](https://typicode.github.io/husky/) pre-commit hook — `pnpm fix` runs on staged files and commits with remaining lint errors are blocked.
+
 ## License
 
 MIT

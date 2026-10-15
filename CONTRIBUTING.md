@@ -23,16 +23,30 @@ pnpm build      # production build (dist/index.js + dist/index.d.ts)
 pnpm typecheck  # tsc --noEmit
 pnpm test       # vitest with coverage (53 tests)
 pnpm test:watch # watch mode
+pnpm check      # ultracite/biome lint check (must report 0 errors)
+pnpm fix        # ultracite/biome auto-fix lint and formatting
 pnpm clean      # remove dist/
 ```
+
+## Linting and pre-commit hooks
+
+This project uses [Ultracite](https://www.ultracite.ai/) (Biome preset, see `biome.jsonc`) for linting and formatting, wired up with [Husky](https://typicode.github.io/husky/). The setup is automatic — `pnpm install` runs the `prepare` script, which installs the Git hooks.
+
+On every commit, the pre-commit hook:
+
+1. Runs `ultracite fix` on staged files and re-stages the fixes
+2. Runs `ultracite check` on staged files — **the commit is blocked if any lint errors remain**
+
+You can run the same checks manually with `pnpm check` / `pnpm fix`. Please don't disable rules or add ignore comments to make the check pass — the only accepted suppressions are narrowly scoped ones where a rule conflicts with the `chat` SDK's `Adapter` interface contract, each with a justification comment.
 
 ## Before submitting
 
 Every change must keep the full suite green:
 
-1. `pnpm build` — must exit 0
-2. `pnpm typecheck` — must exit 0
-3. `pnpm test` — all 53 tests must pass (36 in `src/index.test.ts`, 17 in `src/markdown.test.ts`)
+1. `pnpm check` — must report 0 errors
+2. `pnpm build` — must exit 0
+3. `pnpm typecheck` — must exit 0
+4. `pnpm test` — all 53 tests must pass (36 in `src/index.test.ts`, 17 in `src/markdown.test.ts`)
 
 If a test fails, triage and report it — do not patch adapter source just to force it green without understanding the cause.
 
