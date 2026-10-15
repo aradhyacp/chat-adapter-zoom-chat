@@ -76,10 +76,10 @@ export class ZoomAdapter implements Adapter {
     const response = await fetch(
       "https://zoom.us/oauth/token?grant_type=client_credentials",
       {
-        method: "POST",
         headers: {
           Authorization: `Basic ${credentials}`,
         },
+        method: "POST",
       }
     );
 
@@ -96,8 +96,8 @@ export class ZoomAdapter implements Adapter {
     };
 
     this.cachedToken = {
-      value: data.access_token,
       expiresAt: Date.now() + data.expires_in * 1000,
+      value: data.access_token,
     };
 
     return this.cachedToken.value;
@@ -129,7 +129,7 @@ export class ZoomAdapter implements Adapter {
       )
         .update(plainToken)
         .digest("hex");
-      return Response.json({ plainToken, encryptedToken });
+      return Response.json({ encryptedToken, plainToken });
     }
 
     // WBHK-02: Verify signature for all other events
@@ -177,7 +177,7 @@ export class ZoomAdapter implements Adapter {
       // Log raw body hex for diagnosis without exposing full payload.
       this.config.logger.debug(
         "Signature comparison failed (possible ZOOM-506645 Unicode normalization issue)",
-        { bodyHex: Buffer.from(body).toString("hex").substring(0, 200) }
+        { bodyHex: Buffer.from(body).toString("hex").slice(0, 200) }
       );
       return false;
     }
@@ -187,7 +187,7 @@ export class ZoomAdapter implements Adapter {
     payload: ZoomWebhookPayload,
     options?: WebhookOptions
   ): Promise<void> {
-    const chat = this.chat;
+    const { chat } = this;
     if (!chat) {
       this.config.logger.warn(
         "ZoomAdapter: chat not initialized, ignoring event"
@@ -239,27 +239,27 @@ export class ZoomAdapter implements Adapter {
     const formatted = this.formatConverter.toAst(text);
 
     const message = new Message({
-      id: String(eventTs),
-      threadId,
-      text,
+      attachments: [],
+      author: {
+        fullName: userName,
+        isBot: false,
+        isMe: false,
+        userId,
+        userName,
+      },
       formatted,
+      id: String(eventTs),
       // Zoom has no separate mention event — bot_notification fires for all
       // bot interactions (DMs and slash commands). Mark as mention so
       // onNewMention handlers fire consistently with other adapters.
       isMention: true,
-      author: {
-        userId,
-        userName,
-        fullName: userName,
-        isBot: false,
-        isMe: false,
-      },
       metadata: {
         dateSent: new Date(eventTs),
         edited: false,
       },
-      attachments: [],
       raw: payload,
+      text,
+      threadId,
     });
 
     // Store userJid so postMessage/editMessage/deleteMessage can include it
@@ -287,25 +287,25 @@ export class ZoomAdapter implements Adapter {
     const formatted = this.formatConverter.toAst(text);
 
     const msg = new Message({
-      id: messageId,
-      threadId,
-      text,
-      formatted,
-      // team_chat.app_mention is an explicit @mention — always treat as mention
-      isMention: true,
+      attachments: [],
       author: {
-        userId: operatorId,
-        userName: operator,
         fullName: operator,
         isBot: false,
         isMe: false,
+        userId: operatorId,
+        userName: operator,
       },
+      formatted,
+      id: messageId,
+      // team_chat.app_mention is an explicit @mention — always treat as mention
+      isMention: true,
       metadata: {
         dateSent: new Date(timestamp),
         edited: false,
       },
-      attachments: [],
       raw: payload,
+      text,
+      threadId,
     });
 
     // Store operatorId as userJid for outgoing message context
@@ -314,6 +314,7 @@ export class ZoomAdapter implements Adapter {
     await chat.processMessage(this, threadId, msg, options);
   }
 
+  // biome-ignore lint/suspicious/useAwait: Adapter interface requires Promise<void>; keep async signature
   async initialize(chat: ChatInstance): Promise<void> {
     this.chat = chat;
     this.config.logger.debug("ZoomAdapter initialized");
@@ -336,8 +337,8 @@ export class ZoomAdapter implements Adapter {
     if (!response.ok) {
       const body = await response.text();
       this.config.logger.debug(`${operation} API error`, {
-        status: response.status,
         body,
+        status: response.status,
       });
       throw new Error(
         `ZoomAdapter: ${operation} failed with HTTP ${response.status}`
@@ -358,7 +359,7 @@ export class ZoomAdapter implements Adapter {
 
     // Zoom API rejects empty messages — skip silently
     if (!markdown || markdown.trim() === "") {
-      return { id: String(Date.now()), threadId, raw: {} };
+      return { id: String(Date.now()), raw: {}, threadId };
     }
 
     const ast = this.formatConverter.toAst(markdown);
@@ -376,9 +377,9 @@ export class ZoomAdapter implements Adapter {
 
     const userJid = this.threadUserJid.get(threadId);
     const body: Record<string, unknown> = {
+      account_id: this.config.accountId,
       robot_jid: this.config.robotJid,
       to_jid: channelId,
-      account_id: this.config.accountId,
       ...(userJid ? { user_jid: userJid } : {}),
       content: {
         body: contentBody,
@@ -388,7 +389,7 @@ export class ZoomAdapter implements Adapter {
 
     const response = await this.zoomFetch(
       "https://api.zoom.us/v2/im/chat/messages",
-      { method: "POST", body: JSON.stringify(body) },
+      { body: JSON.stringify(body), method: "POST" },
       "postMessage"
     );
     const data = (await response.json()) as {
@@ -397,8 +398,8 @@ export class ZoomAdapter implements Adapter {
     };
     return {
       id: data.message_id ?? data.id ?? String(Date.now()),
-      threadId,
       raw: data,
+      threadId,
     };
   }
 
@@ -414,25 +415,25 @@ export class ZoomAdapter implements Adapter {
     await this.zoomFetch(
       `https://api.zoom.us/v2/im/chat/messages/${messageId}`,
       {
-        method: "PUT",
         body: JSON.stringify({
-          robot_jid: this.config.robotJid,
           account_id: this.config.accountId,
+          robot_jid: this.config.robotJid,
           ...(editUserJid ? { user_jid: editUserJid } : {}),
           content: { body: contentBody },
         }),
+        method: "PUT",
       },
       "editMessage"
     );
     // Zoom returns 204 No Content on success — no body to parse
-    return { id: messageId, threadId, raw: {} };
+    return { id: messageId, raw: {}, threadId };
   }
 
   async deleteMessage(threadId: string, messageId: string): Promise<void> {
     const deleteUserJid = this.threadUserJid.get(threadId);
     const params = new URLSearchParams({
-      robot_jid: this.config.robotJid,
       account_id: this.config.accountId,
+      robot_jid: this.config.robotJid,
       ...(deleteUserJid ? { user_jid: deleteUserJid } : {}),
     });
     await this.zoomFetch(
@@ -442,6 +443,7 @@ export class ZoomAdapter implements Adapter {
     );
   }
 
+  // biome-ignore lint/suspicious/useAwait: throwing inside async yields a rejected Promise, which callers await
   async fetchMessages(
     _threadId: string,
     _options?: FetchOptions
@@ -452,6 +454,7 @@ export class ZoomAdapter implements Adapter {
     );
   }
 
+  // biome-ignore lint/suspicious/useAwait: throwing inside async yields a rejected Promise, which callers await
   async fetchThread(_threadId: string): Promise<ThreadInfo> {
     throw new NotImplementedError(
       "ZoomAdapter: fetchThread not yet implemented",
@@ -459,6 +462,7 @@ export class ZoomAdapter implements Adapter {
     );
   }
 
+  // biome-ignore lint/suspicious/useAwait: throwing inside async yields a rejected Promise, which callers await
   async addReaction(
     _threadId: string,
     _messageId: string,
@@ -470,6 +474,7 @@ export class ZoomAdapter implements Adapter {
     );
   }
 
+  // biome-ignore lint/suspicious/useAwait: throwing inside async yields a rejected Promise, which callers await
   async removeReaction(
     _threadId: string,
     _messageId: string,
@@ -573,12 +578,12 @@ export function createZoomAdapter(config?: ZoomAdapterConfig): ZoomAdapter {
   const userName =
     config?.userName ?? process.env.ZOOM_BOT_USERNAME ?? "zoom-bot";
   return new ZoomAdapter({
+    accountId,
     clientId,
     clientSecret,
-    robotJid,
-    accountId,
-    webhookSecretToken,
-    userName,
     logger,
+    robotJid,
+    userName,
+    webhookSecretToken,
   });
 }

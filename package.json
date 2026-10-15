@@ -2,50 +2,6 @@
   "name": "zoom-chat-adapter",
   "version": "0.1.1",
   "description": "Zoom Team Chat adapter for chat-sdk",
-  "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "test": "vitest run --coverage",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
-  },
-  "dependencies": {
-    "@chat-adapter/shared": "^4.24.0",
-    "chat": "^4.24.0"
-  },
-  "devDependencies": {
-    "@types/mdast": "^4.0.4",
-    "@types/node": "^25.3.2",
-    "@vitest/coverage-v8": "^4.0.18",
-    "tsup": "^8.3.5",
-    "typescript": "^5.7.2",
-    "vitest": "^4.0.18"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/aradhyacp/zoom-chat-adapter.git"
-  },
-  "homepage": "https://github.com/aradhyacp/zoom-chat-adapter#readme",
-  "bugs": {
-    "url": "https://github.com/aradhyacp/zoom-chat-adapter/issues"
-  },
   "keywords": [
     "chat",
     "zoom",
@@ -54,5 +10,55 @@
     "messaging",
     "team-chat"
   ],
-  "license": "MIT"
+  "homepage": "https://github.com/aradhyacp/zoom-chat-adapter#readme",
+  "bugs": {
+    "url": "https://github.com/aradhyacp/zoom-chat-adapter/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aradhyacp/zoom-chat-adapter.git"
+  },
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "check": "ultracite check",
+    "clean": "rm -rf dist",
+    "dev": "tsup --watch",
+    "fix": "ultracite fix",
+    "prepare": "husky",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chat-adapter/shared": "^4.24.0",
+    "chat": "^4.24.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^25.3.2",
+    "@vitest/coverage-v8": "^4.0.18",
+    "husky": "^9.1.7",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "ultracite": "8.0.1",
+    "vitest": "^4.0.18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
