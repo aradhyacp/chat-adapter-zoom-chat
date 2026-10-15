@@ -34,11 +34,13 @@ jobs:
               return;
             }
 
-            const body =
-              `@dev this action failed (${run.name}) can you please check it out and fix it thank you.\n\n` +
-              `Failed run: ${run.html_url}`;
-
             for (const pr of prs) {
+              const author = pr.user?.login;
+              const mention = author ? `@${author} ` : '';
+              const body =
+                `${mention}this action failed (${run.name}) can you please check it out and fix it thank you.\n\n` +
+                `Failed run: ${run.html_url}`;
+
               await github.rest.issues.createComment({
                 owner,
                 repo,
