@@ -1,4 +1,3 @@
-# ultracite
 #!/bin/sh
 # Fix only the staged files
 STAGED_FILES=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMR)
