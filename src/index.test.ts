@@ -7,10 +7,10 @@ import type { ZoomMessageWithReply } from "./types.js";
 
 const TEST_SECRET = "test-webhook-secret";
 const TEST_CREDENTIALS = {
+  accountId: "test-account-id",
   clientId: "test-client-id",
   clientSecret: "test-client-secret",
   robotJid: "test-robot-jid",
-  accountId: "test-account-id",
   webhookSecretToken: TEST_SECRET,
 };
 
@@ -31,13 +31,13 @@ function makeZoomRequest(
     overrides?.timestamp ?? String(Math.floor(Date.now() / 1000));
   const signature = overrides?.signature ?? makeSignature(body, timestamp);
   return new Request("https://example.com/webhook", {
-    method: "POST",
+    body,
     headers: {
       "content-type": "application/json",
-      "x-zm-signature": signature,
       "x-zm-request-timestamp": timestamp,
+      "x-zm-signature": signature,
     },
-    body,
+    method: "POST",
   });
 }
 
@@ -50,9 +50,9 @@ describe("ZoomAdapter — Webhook Verification (WBHK-01, WBHK-02, WBHK-03)", () 
       payload: { plainToken },
     });
     const request = new Request("https://example.com/webhook", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
       body,
+      headers: { "content-type": "application/json" },
+      method: "POST",
     });
 
     const response = await adapter.handleWebhook(request);
@@ -63,8 +63,8 @@ describe("ZoomAdapter — Webhook Verification (WBHK-01, WBHK-02, WBHK-03)", () 
       .update(plainToken)
       .digest("hex");
     expect(json).toEqual({
-      plainToken,
       encryptedToken: expectedEncryptedToken,
+      plainToken,
     });
   });
 
@@ -83,12 +83,12 @@ describe("ZoomAdapter — Webhook Verification (WBHK-01, WBHK-02, WBHK-03)", () 
     const body = JSON.stringify({ event: "bot_notification", payload: {} });
     const timestamp = String(Math.floor(Date.now() / 1000));
     const request = new Request("https://example.com/webhook", {
-      method: "POST",
+      body,
       headers: {
         "content-type": "application/json",
         "x-zm-request-timestamp": timestamp,
       },
-      body,
+      method: "POST",
     });
 
     const response = await adapter.handleWebhook(request);
@@ -123,13 +123,13 @@ describe("ZoomAdapter — Webhook Verification (WBHK-01, WBHK-02, WBHK-03)", () 
 describe("ZoomAdapter — S2S OAuth Token (AUTH-01, AUTH-02, AUTH-04)", () => {
   function mockTokenFetch(token = "access-token-1", expiresIn = 3600) {
     return vi.fn().mockResolvedValue({
-      ok: true,
       json: () =>
         Promise.resolve({
           access_token: token,
-          token_type: "bearer",
           expires_in: expiresIn,
+          token_type: "bearer",
         }),
+      ok: true,
     });
   }
 
@@ -182,10 +182,10 @@ describe("ZoomAdapter — S2S OAuth Token (AUTH-01, AUTH-02, AUTH-04)", () => {
 
 describe("ZoomAdapter — Factory Validation (AUTH-03)", () => {
   const BASE = {
+    accountId: "acct",
     clientId: "id",
     clientSecret: "secret",
     robotJid: "jid",
-    accountId: "acct",
     webhookSecretToken: "token",
   };
 
@@ -282,7 +282,7 @@ describe("ZoomAdapter — bot_notification (WBHK-04)", () => {
     const chat = makeMockChat();
     await adapter.initialize(chat);
 
-    const eventTs = 1712600000000;
+    const eventTs = 1_712_600_000_000;
     const toJid = "abc123@conference.xmpp.zoom.us";
     const body = JSON.stringify({
       event: "bot_notification",
@@ -316,7 +316,7 @@ describe("ZoomAdapter — bot_notification (WBHK-04)", () => {
     const chat = makeMockChat();
     await adapter.initialize(chat);
 
-    const eventTs = 1712600001000;
+    const eventTs = 1_712_600_001_000;
     const userJid = "user@xmpp.zoom.us";
     const body = JSON.stringify({
       event: "bot_notification",
@@ -354,22 +354,22 @@ describe("ZoomAdapter — team_chat.app_mention (WBHK-05)", () => {
     const channelId = "channel-id-123";
     const body = JSON.stringify({
       event: "team_chat.app_mention",
-      event_ts: 1712600002000,
+      event_ts: 1_712_600_002_000,
       payload: {
         account_id: "acct",
+        by_external_user: false,
+        object: {
+          channel_id: channelId,
+          channel_name: "general",
+          date_time: "2024-04-08T12:00:00Z",
+          message: "@bot please help",
+          message_id: messageId,
+          timestamp: 1_712_577_600_000,
+          type: "to_channel",
+        },
         operator: "carol@example.com",
         operator_id: "user-id-3",
         operator_member_id: "member-id-3",
-        by_external_user: false,
-        object: {
-          message_id: messageId,
-          type: "to_channel",
-          channel_id: channelId,
-          channel_name: "general",
-          message: "@bot please help",
-          date_time: "2024-04-08T12:00:00Z",
-          timestamp: 1712577600000,
-        },
       },
     });
     const request = makeZoomRequest(body);
@@ -392,9 +392,9 @@ const DELETE_MESSAGE_ERROR_PATTERN = /deleteMessage.*403|403.*deleteMessage/;
 describe("ZoomAdapter — postMessage (MSG-01, MSG-02)", () => {
   function mockFetch(status: number, body: unknown): ReturnType<typeof vi.fn> {
     return vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(body),
       ok: status >= 200 && status < 300,
       status,
-      json: () => Promise.resolve(body),
       text: () => Promise.resolve(JSON.stringify(body)),
     });
   }
@@ -413,19 +413,19 @@ describe("ZoomAdapter — postMessage (MSG-01, MSG-02)", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.zoom.us/v2/im/chat/messages",
       expect.objectContaining({
-        method: "POST",
         headers: expect.objectContaining({
           Authorization: "Bearer test-token",
         }),
+        method: "POST",
       })
     );
     const callBody = JSON.parse(
       (fetchMock.mock.calls[0][1] as { body: string }).body
     ) as Record<string, unknown>;
     expect(callBody).toMatchObject({
+      account_id: TEST_CREDENTIALS.accountId,
       robot_jid: TEST_CREDENTIALS.robotJid,
       to_jid: "chan@conference.xmpp.zoom.us",
-      account_id: TEST_CREDENTIALS.accountId,
     });
     expect(callBody).toHaveProperty("content.body");
   });
@@ -443,9 +443,9 @@ describe("ZoomAdapter — postMessage (MSG-01, MSG-02)", () => {
       (fetchMock.mock.calls[0][1] as { body: string }).body
     ) as Record<string, unknown>;
     expect(callBody).toMatchObject({
+      account_id: TEST_CREDENTIALS.accountId,
       robot_jid: TEST_CREDENTIALS.robotJid,
       to_jid: "user@xmpp.zoom.us",
-      account_id: TEST_CREDENTIALS.accountId,
     });
     expect(callBody).not.toHaveProperty("reply_main_message_id");
   });
@@ -473,8 +473,8 @@ describe("ZoomAdapter — postMessage (MSG-01, MSG-02)", () => {
     const threadId = "zoom:chan@conference.xmpp.zoom.us:msg-004";
     // Combine a valid postable string shape with metadata for replyTo
     const replyMsg: ZoomMessageWithReply = {
-      raw: "Reply text",
       metadata: { replyTo: "parent-id" },
+      raw: "Reply text",
     };
     await adapter.postMessage(
       threadId,
@@ -491,11 +491,11 @@ describe("ZoomAdapter — postMessage (MSG-01, MSG-02)", () => {
     const fetchMock = mockFetch(200, { message_id: "msg-uuid-789" });
     vi.stubGlobal("fetch", fetchMock);
     const mockLogger = {
+      child: vi.fn().mockReturnThis(),
       debug: vi.fn(),
+      error: vi.fn(),
       info: vi.fn(),
       warn: vi.fn(),
-      error: vi.fn(),
-      child: vi.fn().mockReturnThis(),
     };
     const adapter = createZoomAdapter({
       ...TEST_CREDENTIALS,
@@ -506,8 +506,8 @@ describe("ZoomAdapter — postMessage (MSG-01, MSG-02)", () => {
     const threadId = "zoom:user@xmpp.zoom.us:msg-005";
     // Combine a valid postable string shape with metadata for replyTo
     const replyMsg: ZoomMessageWithReply = {
-      raw: "DM reply",
       metadata: { replyTo: "parent-id" },
+      raw: "DM reply",
     };
     await adapter.postMessage(
       threadId,
@@ -537,9 +537,9 @@ describe("ZoomAdapter — postMessage (MSG-01, MSG-02)", () => {
 describe("ZoomAdapter — editMessage (MSG-03)", () => {
   function mockFetch(status: number, body: unknown): ReturnType<typeof vi.fn> {
     return vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(body),
       ok: status >= 200 && status < 300,
       status,
-      json: () => Promise.resolve(body),
       text: () => Promise.resolve(JSON.stringify(body)),
     });
   }
@@ -561,18 +561,18 @@ describe("ZoomAdapter — editMessage (MSG-03)", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.zoom.us/v2/im/chat/messages/msg-to-edit",
       expect.objectContaining({
-        method: "PUT",
         headers: expect.objectContaining({
           Authorization: "Bearer test-token",
         }),
+        method: "PUT",
       })
     );
     const callBody = JSON.parse(
       (fetchMock.mock.calls[0][1] as { body: string }).body
     ) as Record<string, unknown>;
     expect(callBody).toMatchObject({
-      robot_jid: TEST_CREDENTIALS.robotJid,
       account_id: TEST_CREDENTIALS.accountId,
+      robot_jid: TEST_CREDENTIALS.robotJid,
     });
     expect(callBody).toHaveProperty("content.body");
   });
@@ -614,9 +614,9 @@ describe("ZoomAdapter — editMessage (MSG-03)", () => {
 describe("ZoomAdapter — deleteMessage (MSG-04)", () => {
   function mockFetch(status: number, body: unknown): ReturnType<typeof vi.fn> {
     return vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(body),
       ok: status >= 200 && status < 300,
       status,
-      json: () => Promise.resolve(body),
       text: () => Promise.resolve(JSON.stringify(body)),
     });
   }
@@ -635,12 +635,14 @@ describe("ZoomAdapter — deleteMessage (MSG-04)", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("https://api.zoom.us/v2/im/chat/messages/msg-to-delete"),
+      expect.stringContaining(
+        "https://api.zoom.us/v2/im/chat/messages/msg-to-delete"
+      ),
       expect.objectContaining({
-        method: "DELETE",
         headers: expect.objectContaining({
           Authorization: "Bearer test-token",
         }),
+        method: "DELETE",
       })
     );
   });
@@ -693,7 +695,7 @@ describe("ZoomAdapter — Unhandled events and uninitialized adapter safety (THR
 
     const body = JSON.stringify({
       event: "team_chat.some_unknown_event",
-      event_ts: 1712600003000,
+      event_ts: 1_712_600_003_000,
       payload: {},
     });
     const request = makeZoomRequest(body);
@@ -711,12 +713,12 @@ describe("ZoomAdapter — Unhandled events and uninitialized adapter safety (THR
     // Do NOT call initialize — chat is null
     const body = JSON.stringify({
       event: "bot_notification",
-      event_ts: 1712600004000,
+      event_ts: 1_712_600_004_000,
       payload: {
         accountId: "acct",
         cmd: "hello",
         robotJid: "bot@xmpp.zoom.us",
-        timestamp: 1712600004000,
+        timestamp: 1_712_600_004_000,
         toJid: "chan@conference.xmpp.zoom.us",
         userId: "uid",
         userJid: "u@xmpp.zoom.us",

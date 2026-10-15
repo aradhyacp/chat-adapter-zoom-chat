@@ -18,7 +18,7 @@ import {
   stringifyMarkdown,
   walkAst,
 } from "chat";
-import type { Heading, ListItem, PhrasingContent, Text } from "mdast";
+import type { Heading, List, ListItem, PhrasingContent, Text } from "mdast";
 import type { UnderlineNode } from "./types.js";
 
 export interface ZoomContentBodyItem {
@@ -27,6 +27,70 @@ export interface ZoomContentBodyItem {
   text: string;
   type: "message";
 }
+
+const resolveText = (text: string): string =>
+  convertEmojiPlaceholders(text, "whatsapp");
+
+// Extract plain text from phrasing content nodes (strips bold/italic markers)
+const extractText = (nodes: PhrasingContent[]): string =>
+  nodes
+    .map((node) => {
+      if (node.type === "text") {
+        return resolveText((node as Text).value);
+      }
+      if (node.type === "strong" || node.type === "emphasis") {
+        return extractText(node.children as PhrasingContent[]);
+      }
+      if (node.type === "inlineCode") {
+        return `\`${node.value}\``;
+      }
+      if (node.type === "html") {
+        return resolveText((node as { type: "html"; value: string }).value);
+      }
+      return "";
+    })
+    .join("");
+
+// Check if ALL phrasing nodes are bold (entire paragraph is bold)
+const isAllBold = (nodes: PhrasingContent[]): boolean =>
+  nodes.length > 0 &&
+  nodes.every(
+    (n) =>
+      n.type === "strong" ||
+      (n.type === "text" && (n as Text).value.trim() === "")
+  );
+
+const paragraphSegment = (
+  children: PhrasingContent[]
+): ZoomContentBodyItem | null => {
+  const text = extractText(children).trim();
+  if (!text) {
+    return null;
+  }
+  const style = isAllBold(children) ? { bold: true } : undefined;
+  return { text, type: "message", ...(style ? { style } : {}) };
+};
+
+const headingSegment = (block: Heading): ZoomContentBodyItem | null => {
+  const text = extractText(block.children as PhrasingContent[]).trim();
+  if (!text) {
+    return null;
+  }
+  return { style: { bold: true }, text, type: "message" };
+};
+
+const listSegments = (block: List): ZoomContentBodyItem[] => {
+  const segments: ZoomContentBodyItem[] = [];
+  for (const item of block.children as ListItem[]) {
+    for (const child of item.children) {
+      if (child.type === "paragraph") {
+        const text = `• ${extractText(child.children).trim()}`;
+        segments.push({ text, type: "message" });
+      }
+    }
+  }
+  return segments;
+};
 
 export class ZoomFormatConverter extends BaseFormatConverter {
   override renderPostable(message: AdapterPostableMessage): string {
@@ -41,72 +105,28 @@ export class ZoomFormatConverter extends BaseFormatConverter {
   toZoomContentBody(ast: Root): ZoomContentBodyItem[] {
     const segments: ZoomContentBodyItem[] = [];
 
-    const resolveText = (text: string): string =>
-      convertEmojiPlaceholders(text, "whatsapp");
-
-    // Extract plain text from phrasing content nodes (strips bold/italic markers)
-    const extractText = (nodes: PhrasingContent[]): string =>
-      nodes
-        .map((node) => {
-          if (node.type === "text") {
-            return resolveText((node as Text).value);
-          }
-          if (node.type === "strong" || node.type === "emphasis") {
-            return extractText(node.children as PhrasingContent[]);
-          }
-          if (node.type === "inlineCode") {
-            return `\`${node.value}\``;
-          }
-          if (node.type === "html") {
-            return resolveText((node as { type: "html"; value: string }).value);
-          }
-          return "";
-        })
-        .join("");
-
-    // Check if ALL phrasing nodes are bold (entire paragraph is bold)
-    const isAllBold = (nodes: PhrasingContent[]): boolean =>
-      nodes.length > 0 &&
-      nodes.every(
-        (n) =>
-          n.type === "strong" ||
-          (n.type === "text" && (n as Text).value.trim() === "")
-      );
-
     for (const block of ast.children) {
       if (block.type === "paragraph") {
-        const text = extractText(block.children).trim();
-        if (!text) {
-          continue;
+        const segment = paragraphSegment(block.children);
+        if (segment) {
+          segments.push(segment);
         }
-        const style = isAllBold(block.children) ? { bold: true } : undefined;
-        segments.push({ type: "message", text, ...(style ? { style } : {}) });
       } else if (block.type === "heading") {
-        const headingNode = block as Heading;
-        const text = extractText(
-          headingNode.children as PhrasingContent[]
-        ).trim();
-        if (text) {
-          segments.push({ type: "message", text, style: { bold: true } });
+        const segment = headingSegment(block as Heading);
+        if (segment) {
+          segments.push(segment);
         }
       } else if (block.type === "list") {
-        for (const item of block.children as ListItem[]) {
-          for (const child of item.children) {
-            if (child.type === "paragraph") {
-              const text = `• ${extractText(child.children).trim()}`;
-              segments.push({ type: "message", text });
-            }
-          }
-        }
+        segments.push(...listSegments(block));
       } else if (block.type === "code") {
         segments.push({
-          type: "message",
           text: `\`\`\`\n${block.value}\n\`\`\``,
+          type: "message",
         });
       }
     }
 
-    return segments.length > 0 ? segments : [{ type: "message", text: "" }];
+    return segments.length > 0 ? segments : [{ text: "", type: "message" }];
   }
 
   /**
@@ -131,8 +151,8 @@ export class ZoomFormatConverter extends BaseFormatConverter {
           children: PhrasingContent[];
         };
         return {
-          type: "underline",
           children: linkNode.children,
+          type: "underline",
         } as unknown as Content;
       }
       return node;
@@ -174,8 +194,8 @@ export class ZoomFormatConverter extends BaseFormatConverter {
     );
 
     const markdown = stringifyMarkdown(transformed as Root, {
-      emphasis: "_",
       bullet: "*", // Zoom uses * for list bullets
+      emphasis: "_",
     }).trim();
 
     return this.toZoomMarkdown(markdown);
