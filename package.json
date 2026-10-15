@@ -1,6 +1,6 @@
 {
   "name": "zoom-chat-adapter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zoom Team Chat adapter for chat-sdk",
   "keywords": [
     "chat",
@@ -40,7 +40,9 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "AGENTS.md",
+    "CLAUDE.md"
   ],
   "scripts": {
     "build": "tsup",

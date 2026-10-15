@@ -11,12 +11,13 @@ Zoom Team Chat adapter for [Chat SDK](https://chat-sdk.dev) — send and receive
 ## Installation
 
 ```bash
-pnpm add zoom-chat-adapter chat @chat-adapter/shared
+pnpm add zoom-chat-adapter chat @chat-adapter/state-memory
 ```
 
 ## Usage
 
 ```typescript
+import { createMemoryState } from "@chat-adapter/state-memory";
 import { Chat } from "chat";
 import { createZoomAdapter } from "zoom-chat-adapter";
 
@@ -25,6 +26,7 @@ const bot = new Chat({
   adapters: {
     zoom: createZoomAdapter(),
   },
+  state: createMemoryState(),
 });
 
 bot.onNewMention(async (thread, message) => {
@@ -33,6 +35,8 @@ bot.onNewMention(async (thread, message) => {
 ```
 
 When using `createZoomAdapter()` without arguments, credentials are auto-detected from environment variables.
+
+A `state` adapter is required — `Chat` connects to it during initialization and crashes on the first webhook without one. `createMemoryState()` is the in-memory option for development and testing.
 
 ## Zoom Marketplace app setup
 
@@ -104,7 +108,7 @@ import { bot } from "@/lib/bot";
 import { after } from "next/server";
 
 export async function POST(request: Request) {
-  return bot.adapters.zoom.handleWebhook(request, { waitUntil: after });
+  return bot.webhooks.zoom(request, { waitUntil: after });
 }
 ```
 

@@ -50,17 +50,19 @@ That means:
 ### Install
 
 ```bash
-pnpm add zoom-chat-adapter chat @chat-adapter/shared
+pnpm add zoom-chat-adapter chat @chat-adapter/state-memory
 ```
 
-`chat` and `@chat-adapter/shared` are regular `dependencies` of this package, so a
-package manager will pull them in automatically. Install them explicitly anyway: your
-application imports `Chat` from `chat` directly, and depending on a transitive package is
-fragile.
+`chat` is a regular `dependency` of this package, so a package manager pulls it in
+automatically — install it explicitly anyway, since your application imports `Chat`
+from it directly. `@chat-adapter/state-memory` is not a dependency of this package,
+so install it explicitly too: your application imports `createMemoryState` from it
+directly, and depending on a transitive package is fragile.
 
 ### Minimal usage
 
 ```typescript
+import { createMemoryState } from "@chat-adapter/state-memory";
 import { Chat } from "chat";
 import { createZoomAdapter } from "zoom-chat-adapter";
 
@@ -69,6 +71,7 @@ const bot = new Chat({
   adapters: {
     zoom: createZoomAdapter(),
   },
+  state: createMemoryState(),
 });
 
 bot.onNewMention(async (thread, message) => {
@@ -90,7 +93,7 @@ import { after } from "next/server";
 import { bot } from "@/lib/bot";
 
 export async function POST(request: Request) {
-  return bot.adapters.zoom.handleWebhook(request, { waitUntil: after });
+  return bot.webhooks.zoom(request, { waitUntil: after });
 }
 ```
 
