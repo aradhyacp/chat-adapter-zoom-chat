@@ -1,4 +1,5 @@
 import { defineConfig } from "blume";
+import seoHead from "./integrations/seo-head.mjs";
 
 // design.md substitutes Inter 300 for the licensed Waldenburg Light, so the
 // display and body roles share one family and differ only in weight. Both
@@ -34,6 +35,9 @@ export default defineConfig({
     owner: "aradhyacp",
     repo: "zoom-chat-adapter",
   },
+  // Appends the web-app manifest link and the raster favicon links Blume's
+  // filename convention can't emit — see integrations/seo-head.mjs.
+  integrations: [seoHead()],
   markdown: {
     code: {
       icons: true,
@@ -52,6 +56,15 @@ export default defineConfig({
         label: "GitHub",
       },
     ],
+  },
+  seo: {
+    // Blume writes the canonical, description, OG, and X-card tags itself.
+    // These are the tags it has no setting for, plus the X attribution handle.
+    metatags: {
+      "og:locale": "en_US",
+      "theme-color": "#fdfcfc",
+    },
+    x: { handle: "@aradhyacp" },
   },
   theme: {
     // Ink pill, not a saturated brand color (design.md: primary #292524).
