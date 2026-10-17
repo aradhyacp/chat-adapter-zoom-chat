@@ -10,10 +10,11 @@ const inter = {
 
 export default defineConfig({
   deployment: {
-    // The canonical URL of the deployed docs — sitemap, canonicals, Open Graph
-    // cards, and llms.txt are all built from it. DOCS_SITE overrides it, which
-    // is what preview deployments set.
-    site: process.env.DOCS_SITE ?? "https://zoom-chat-adapter.vercel.app",
+    // Left empty on purpose: Blume fills `site` in from the host's own env
+    // (on Vercel, the production domain) and an explicit value would win over
+    // that detection. Set DOCS_SITE to pin it — a custom domain, or a local
+    // build that needs the sitemap and absolute llms.txt links.
+    site: process.env.DOCS_SITE,
   },
   description:
     "Community Zoom Team Chat adapter for Chat SDK — channels, DMs, slash commands, and @-mentions through one Chat interface.",
