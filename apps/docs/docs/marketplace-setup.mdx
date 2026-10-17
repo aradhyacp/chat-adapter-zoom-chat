@@ -1,0 +1,89 @@
+---
+title: Marketplace setup
+description: Create the Zoom app, collect the five credentials, subscribe to the events, and test through ngrok.
+---
+
+Everything here happens once, in the
+[Zoom Marketplace](https://marketplace.zoom.us) dashboard. By the end you will
+have the five values the adapter needs.
+
+<Steps>
+
+<Step title="Create the app">
+
+**Develop → Build App → General App.** In Basic Information, set the management
+type to **Admin-managed**.
+
+</Step>
+
+<Step title="Copy the core credentials">
+
+Basic Information → App Credentials:
+
+| In the dashboard | Environment variable |
+| --- | --- |
+| Client ID | `ZOOM_CLIENT_ID` |
+| Client Secret | `ZOOM_CLIENT_SECRET` |
+| Account ID | `ZOOM_ACCOUNT_ID` |
+
+</Step>
+
+<Step title="Turn on Team Chat and copy the bot JID">
+
+**Surface → Team Chat Subscription.** Enable it and set the Bot Endpoint URL to
+your webhook route — `https://your-domain.com/api/webhooks/zoom`. Copy the Bot
+JID into `ZOOM_ROBOT_JID`.
+
+</Step>
+
+<Step title="Copy the secret token">
+
+**Features → Access → Token.** The Secret Token is `ZOOM_WEBHOOK_SECRET_TOKEN`.
+It signs every webhook, so it is the one value you cannot guess your way past.
+
+</Step>
+
+<Step title="Subscribe to the events">
+
+**Features → Access → Event Subscription.** Enable it, set the same webhook URL,
+and subscribe to `bot_notification` and `team_chat.app_mention`.
+
+Saving sends the setup challenge to your endpoint. The adapter answers it
+automatically, so your app has to be running and reachable at that moment.
+
+</Step>
+
+<Step title="Add the scopes">
+
+| Scope | What it is for |
+| --- | --- |
+| `imchat:bot` | Sending bot messages to channels and DMs |
+| `team_chat:read:app_mention:admin` | Receiving @-mention events |
+| `team_chat:write:message:admin` | Sending, editing, and deleting messages |
+
+</Step>
+
+<Step title="Install it">
+
+**Local Test → Add app now**, then complete the OAuth flow. The bot now exists
+in your account and can be added to channels.
+
+</Step>
+
+</Steps>
+
+## Testing locally
+
+```bash
+ngrok http 3000
+```
+
+Use the `https://` forwarding URL as both the Bot Endpoint URL and the event
+subscription URL. ngrok hands out a new URL each time it restarts on the free
+plan, so expect to paste it into both fields again.
+
+:::note
+Zoom will not call an endpoint it cannot verify. If saving the subscription
+fails, your app is not running, not reachable, or answering the challenge from a
+different secret token than the one in the dashboard.
+:::

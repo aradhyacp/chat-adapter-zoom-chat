@@ -1,0 +1,61 @@
+---
+title: Formatting
+description: How markdown in your reply becomes Zoom content segments — including what Zoom cannot carry and what is dropped on the way.
+---
+
+Zoom Team Chat does not take markdown. A message is a list of segments, each one
+a string with an optional bold or italic style, so the adapter converts your
+reply into that shape before sending it.
+
+Most of what you write survives. Some of it does not, and the table below is the
+honest version.
+
+<FormatPreview />
+
+## What reaches Zoom
+
+| What you write | What Zoom receives |
+| --- | --- |
+| A paragraph | One segment of plain text |
+| A paragraph that is bold end to end | One segment with `style.bold` |
+| `**bold**` inside a sentence | The words, with the markers removed and no bold |
+| `_italic_` | The words, with the markers removed and no italics |
+| `` `code` `` | Kept as written, backticks and all |
+| `# Heading` | A bold segment |
+| `* item` | A segment starting with `•` |
+| A fenced code block | One segment, fences included |
+| `~strikethrough~` | **Dropped** — the text does not arrive |
+| `__underline__` | **Dropped** — the text does not arrive |
+| `[label](https://…)` | **Dropped** — neither label nor URL arrives |
+| `:tada:` and other shortcodes | The Unicode emoji |
+| An empty message | Nothing is sent; the Zoom API rejects empty messages |
+
+:::warning
+Strikethrough, underline, and link text disappear from an outgoing message. Write
+a URL as bare text (`https://zoom.us/…`) rather than as a markdown link, and say
+"removed" in words rather than striking it through.
+:::
+
+Inline bold and italics are read and then flattened: `**Deploy** finished` arrives
+as `Deploy finished` with no emphasis. To get a bold line in Zoom, make the whole
+paragraph bold:
+
+```ts
+await thread.post("**Deploy finished**\n\nShipped api-gateway in 94s.");
+```
+
+That sends two segments — a bold one and a plain one.
+
+## Reading an incoming message
+
+The other direction is lossless. Incoming text is parsed with Zoom's own
+conventions, which differ from standard markdown in two places:
+
+| Token | Meaning |
+| --- | --- |
+| `__text__` | Underline, not bold |
+| `~text~` | Strikethrough, with a single tilde |
+
+Everything else — `**bold**`, `_italic_`, `` `code` ``, `#` headings, `*` lists —
+is standard. `message.text` holds the raw text the user typed, and
+`message.formatted` holds the parsed tree.

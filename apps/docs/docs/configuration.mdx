@@ -1,0 +1,68 @@
+---
+title: Configuration
+description: Every option, the environment variable behind it, and what happens when one is missing.
+---
+
+`createZoomAdapter()` reads everything from the environment, so most apps call
+it with no arguments at all:
+
+```ts
+const adapter = createZoomAdapter();
+```
+
+Anything you pass explicitly wins over the environment:
+
+```ts
+createZoomAdapter({
+  clientId: "your-client-id",
+  clientSecret: "your-client-secret",
+  accountId: "your-account-id",
+  robotJid: "bot-jid@xmpp.zoom.us",
+  webhookSecretToken: "your-secret-token",
+});
+```
+
+## Options
+
+| Option | Environment variable | Required | Notes |
+| --- | --- | --- | --- |
+| `clientId` | `ZOOM_CLIENT_ID` | Yes | From the Server-to-Server OAuth app |
+| `clientSecret` | `ZOOM_CLIENT_SECRET` | Yes | From the same app |
+| `accountId` | `ZOOM_ACCOUNT_ID` | Yes | Sent with message calls, not with the token request |
+| `robotJid` | `ZOOM_ROBOT_JID` | Yes | The Bot JID from Team Chat Subscription |
+| `webhookSecretToken` | `ZOOM_WEBHOOK_SECRET_TOKEN` | Yes | Signs webhooks and the setup challenge |
+| `userName` | `ZOOM_BOT_USERNAME` | No | Defaults to `zoom-bot` |
+| `logger` | — | No | Defaults to a console logger at `info`, tagged `zoom` |
+
+A missing credential throws a `ValidationError` the moment the adapter is
+constructed, naming the variable to set. That is a setup problem surfacing
+early, not a runtime bug — the app will not start until it is fixed.
+
+[Marketplace setup](./marketplace-setup) shows where each value lives in the
+Zoom dashboard.
+
+## Logging
+
+Pass your own logger to route adapter output into whatever you already use:
+
+```ts
+createZoomAdapter({ logger: myLogger.child("zoom") });
+```
+
+Debug level is where the useful detail goes — Zoom's error response bodies,
+dropped events, and the body hex written when a signature comparison fails.
+
+## Authentication
+
+The adapter fetches a Server-to-Server OAuth token with the
+`client_credentials` grant and keeps it in memory, refreshing a minute before
+it expires. A failed fetch throws an `AuthenticationError` carrying the HTTP
+status.
+
+The cache belongs to the adapter instance, so build one adapter and keep it —
+constructing a new one per request means a new token fetch every time.
+
+:::warning
+The `/v2/im/chat/messages` endpoints need a `client_credentials` token. An
+`account_credentials` token is rejected with a `401`.
+:::

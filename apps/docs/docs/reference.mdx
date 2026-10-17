@@ -1,0 +1,133 @@
+---
+title: API reference
+description: Everything the package exports, what each method does, and what it returns or throws.
+---
+
+The package is ESM only and runs on Node. It uses `node:crypto` and the global
+`fetch`, `Request`, and `Response`.
+
+```ts
+import {
+  createZoomAdapter,
+  ZoomAdapter,
+  type ZoomAdapterConfig,
+  type ZoomThreadId,
+  type ZoomMessageWithReply,
+  type ZoomWebhookPayload,
+  type ZoomCrcPayload,
+  type ZoomBotNotificationPayload,
+  type ZoomAppMentionPayload,
+} from "zoom-chat-adapter";
+```
+
+## createZoomAdapter(config?)
+
+Builds an adapter, filling anything you leave out from the environment. Prefer
+it over constructing the class: it is where the credential checks live.
+
+```ts
+const adapter = createZoomAdapter(); // everything from the environment
+```
+
+Each missing credential throws a `ValidationError` naming the variable to set,
+at construction time rather than on the first webhook. See
+[Configuration](./configuration) for the full list.
+
+## ZoomAdapter
+
+The class behind the factory. Construct it directly only if you already have a
+fully resolved config, including a logger.
+
+| Property | Value |
+| --- | --- |
+| `name` | `"zoom"` |
+| `lockScope` | `"thread"` — one message at a time per thread |
+| `userName` | The bot's name, `"zoom-bot"` unless you set one |
+
+### handleWebhook(request, options?)
+
+Takes the untouched `Request` and returns the `Response` to send back. Answers
+the setup challenge, verifies the signature, and dispatches the event. With
+`options.waitUntil`, processing continues after the response is sent. See
+[Webhooks](./webhooks).
+
+### postMessage(threadId, message)
+
+Sends a message to the thread's channel or DM and resolves to
+`{ id, raw, threadId }`, where `id` is Zoom's message ID. Accepts the standard
+postable message, plus `metadata.replyTo` to reply under a parent message. An
+empty message is not sent.
+
+### editMessage(threadId, messageId, message)
+
+Replaces the content of a message the bot sent. Zoom answers `204 No Content`,
+so the result carries the `messageId` you passed and an empty body.
+
+### deleteMessage(threadId, messageId)
+
+Deletes a message the bot sent. Resolves to nothing.
+
+### startTyping(threadId, status?)
+
+Does nothing, quietly. Zoom Team Chat has no typing-indicator API, and the call
+exists so shared code does not have to special-case Zoom.
+
+### encodeThreadId(platformData) · decodeThreadId(threadId)
+
+Convert between `{ channelId, messageId }` and the `zoom:…` string. See
+[Thread IDs](./thread-ids) for the exact failure cases.
+
+### isDM(threadId)
+
+`true` unless the channel JID ends in `@conference.xmpp.zoom.us`.
+
+### channelIdFromThreadId(threadId)
+
+Returns the channel-level thread ID — `zoom:{channelId}` — which is what you
+post a new message to.
+
+### renderFormatted(content)
+
+Renders a Chat formatted-content tree back to Zoom's markdown conventions:
+`__underline__` and single-tilde `~strikethrough~`, with `*` list bullets.
+
+### getAccessToken()
+
+Returns a Server-to-Server OAuth token, fetched with the `client_credentials`
+grant and cached in memory until a minute before it expires. A failed fetch
+throws an `AuthenticationError` carrying the HTTP status. Keep one adapter
+instance alive rather than constructing one per request, so the cache is worth
+having.
+
+### Methods that throw
+
+`fetchMessages`, `fetchThread`, `addReaction`, `removeReaction`, and
+`parseMessage` throw `NotImplementedError` with the operation name. Zoom's
+chatbot API offers no message history and no bot reactions; `parseMessage` is
+simply not built, since incoming messages arrive parsed.
+
+## Types
+
+| Type | What it describes |
+| --- | --- |
+| `ZoomAdapterConfig` | The factory's options, all optional |
+| `ZoomThreadId` | `{ channelId, messageId }` |
+| `ZoomMessageWithReply` | A postable message carrying `metadata.replyTo` |
+| `ZoomWebhookPayload` | Any webhook body, discriminated on `event` |
+| `ZoomCrcPayload` | The setup challenge |
+| `ZoomBotNotificationPayload` | A DM, slash command, or message to the bot |
+| `ZoomAppMentionPayload` | An @-mention in a channel |
+
+### What the message events carry
+
+`bot_notification` gives you the text as `payload.cmd`, the conversation JID as
+`payload.toJid`, the sender as `payload.userJid` / `payload.userId` /
+`payload.userName`, and the event time as `event_ts` — which also becomes the
+thread's message ID. `payload.channelName` is absent for DMs.
+
+`team_chat.app_mention` nests its content under `payload.object`: `message_id`,
+`channel_id`, `channel_name`, `message`, and `timestamp`. The sender is
+`payload.operator` (an email address) and `payload.operator_id`.
+
+Both arrive at your handlers as an ordinary Chat `Message`, with the original
+payload on `message.raw` if you need a field the adapter does not map.

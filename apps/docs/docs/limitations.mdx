@@ -1,0 +1,53 @@
+---
+title: Limitations
+description: What Zoom's platform will not do, what this adapter has not built yet, and which is which.
+---
+
+Two of these come from Zoom and cannot be fixed here. The rest is scope. Read
+this before you design a feature around threads or history.
+
+## Zoom's platform
+
+### A conversation cannot be followed
+
+Every `bot_notification` arrives with a thread ID built from its own `event_ts`,
+and Zoom sends no parent or reply reference alongside it. Two messages a person
+experiences as one exchange reach your bot as two unrelated threads, so
+`thread.subscribe()` has nothing to hold on to.
+
+Keep your own context — keyed by the channel JID and the user — if your bot
+needs to remember what was said a moment ago.
+
+### Replies in a DM thread never arrive
+
+Zoom does not fire an event when someone replies inside a thread in a one-to-one
+chat. Your bot can post a threaded reply into a DM, but it will never see the
+answer.
+([Zoom devforum](https://devforum.zoom.us/t/clarification-on-zoom-chatbot-webhook-events-for-thread-replies-in-1-1-chats/134812))
+
+In a channel, threaded replies behave normally.
+
+### Emoji and accents can fail signature checks
+
+Zoom's servers may normalise emoji and accented characters differently before
+signing than the bytes they deliver, so those payloads can fail HMAC
+verification and come back `401`. This is tracked by Zoom as **ZOOM-506645**.
+
+The adapter writes the first 200 bytes of the body as hex to the logger at
+`debug` level when a comparison fails, which is the evidence to attach when you
+contact Zoom Support citing that number.
+
+## This adapter
+
+| Not available | Why |
+| --- | --- |
+| Message history (`fetchMessages`, `fetchThread`) | Not implemented — the calls throw |
+| Reactions | Zoom's chatbot API does not offer them |
+| Typing indicator | Zoom has no such API; `startTyping()` returns quietly |
+| Incremental streaming | Output is buffered and sent as one message |
+| CommonJS | ESM only — `require()` will not work |
+
+If you need history or reactions, the honest answer today is that this adapter
+does not provide them. An
+[issue](https://github.com/aradhyacp/zoom-chat-adapter/issues) is the right
+place to say you need one.

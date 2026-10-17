@@ -1,0 +1,80 @@
+---
+title: Troubleshooting
+description: The failure modes that actually come up, and what each one means.
+---
+
+<Accordion title="Every webhook comes back 401 Invalid signature">
+
+Something read the request body before the adapter did. A Web `Request` body can
+only be read once and the signature covers the exact bytes Zoom sent, so a
+logger or middleware calling `request.json()` breaks verification for every
+event. Pass the untouched `Request`.
+
+If the body is clean, check that `ZOOM_WEBHOOK_SECRET_TOKEN` matches the Secret
+Token under **Features → Access → Token**, and that your server's clock is
+right — signatures older than five minutes are refused.
+
+</Accordion>
+
+<Accordion title="Only messages with emoji or accents fail">
+
+That is ZOOM-506645, a normalisation bug on Zoom's side. Turn on `debug`
+logging: the adapter writes the first 200 bytes of the body as hex when the
+comparison fails, which is what Zoom Support needs. See
+[Limitations](./limitations).
+
+</Accordion>
+
+<Accordion title="The bot never receives anything">
+
+Check all three in the Marketplace app:
+
+- **Surface → Team Chat Subscription** — the Bot Endpoint URL matches your
+  deployment.
+- **Features → Access → Event Subscription** — the webhook URL matches too, and
+  `bot_notification` and `team_chat.app_mention` are both subscribed.
+- **Local Test → Add app now** — the app is actually installed in the account.
+
+With ngrok, a restart means a new URL and both fields need it again.
+
+</Accordion>
+
+<Accordion title="The bot shows up in Zoom but never answers">
+
+The events are probably arriving and failing verification — check the signature
+first. Otherwise confirm the app is **Admin-managed**, and that the process
+handling the webhook is the one holding your credentials.
+
+</Accordion>
+
+<Accordion title="Sending a message returns 401">
+
+`ZoomAdapter: postMessage failed with HTTP 401` almost always means the wrong
+OAuth grant. The `/v2/im/chat/messages` endpoints need a `client_credentials`
+token, which is what the adapter requests; an `account_credentials` token is
+rejected. If you are supplying credentials yourself, check they belong to the
+Server-to-Server OAuth app you registered the bot under.
+
+</Accordion>
+
+<Accordion title="A reply in a DM thread is never delivered">
+
+Confirmed Zoom behaviour, not a configuration problem: no event fires for
+replies inside a one-to-one thread. See [Limitations](./limitations).
+
+</Accordion>
+
+<Accordion title="require('zoom-chat-adapter') fails">
+
+The package is ESM only. Use `import`, and make sure the importing package is
+ESM too (`"type": "module"`, or a `.mjs` file).
+
+</Accordion>
+
+<Accordion title="Bold text arrives as plain text in Zoom">
+
+Expected. Inline emphasis is flattened and strikethrough, underline, and link
+text are dropped on the way out — [Formatting](./formatting) has the full table
+and the workaround.
+
+</Accordion>

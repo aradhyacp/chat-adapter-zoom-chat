@@ -1,0 +1,47 @@
+---
+title: Thread IDs
+description: The zoom thread format, how a channel is told apart from a DM, and exactly when decoding fails.
+---
+
+Every thread the adapter hands you carries the Zoom conversation it came from,
+written into the ID:
+
+```
+zoom:{channelId}:{messageId}
+```
+
+`channelId` is a Zoom JID. `messageId` is the event timestamp for a
+`bot_notification`, or the message UUID for a `team_chat.app_mention`.
+
+<ThreadIdPlayground />
+
+## Channel or direct message
+
+The JID suffix is the only signal the adapter has, and it is enough:
+
+| JID ends in | Treated as |
+| --- | --- |
+| `@conference.xmpp.zoom.us` | A channel |
+| anything else | A direct message |
+
+`adapter.isDM(threadId)` answers the same question for you.
+
+## Decoding
+
+`decodeThreadId(threadId)` returns `{ channelId, messageId }`.
+
+- `zoom:abc@conference.xmpp.zoom.us:1750000000000` → both parts, as written.
+- `zoom:abc@conference.xmpp.zoom.us` → `messageId` is `""`. This is a
+  channel-level ID, which is what you post a brand new message to.
+- `zoom::1750000000000` → throws a `ValidationError`: the channel ID is empty.
+- `slack:C123` → throws a `ValidationError`: the ID does not start with `zoom:`.
+
+`zoom:` on its own does not throw — with nothing after the prefix there is no
+second colon to split on, so it decodes to an empty channel ID and an empty
+message ID. The Zoom API call made with it is what will fail.
+
+:::note
+A thread ID is not a conversation. Zoom gives every incoming bot message a fresh
+`event_ts`, so two messages a person sees as one exchange produce two unrelated
+thread IDs. See [Limitations](./limitations).
+:::

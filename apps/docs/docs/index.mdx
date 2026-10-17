@@ -1,0 +1,159 @@
+---
+title: zoom-chat-adapter
+description: Community Zoom Team Chat adapter for Chat SDK — channels, DMs, slash commands, and @-mentions through one Chat interface.
+mode: custom
+---
+
+<HeroBand>
+
+<CodeGroup>
+
+```bash For you
+pnpm add zoom-chat-adapter chat @chat-adapter/state-memory
+```
+
+```text For your agent
+Add Zoom Team Chat support to this project with the community adapter zoom-chat-adapter.
+
+1. Install it: pnpm add zoom-chat-adapter chat @chat-adapter/state-memory
+2. Read the docs first: https://github.com/aradhyacp/zoom-chat-adapter/tree/main/apps/docs/docs
+   — quickstart.mdx, then webhooks.mdx and messaging.mdx. Where the docs are
+   deployed, /llms.txt indexes them and every page serves Markdown at .md.
+3. Create the Chat instance with a state adapter, then one POST route that passes
+   the untouched Request to bot.webhooks.zoom — reading the body first breaks
+   Zoom's signature check.
+4. Read limitations.mdx before designing around threads, history or reactions:
+   several of those calls throw on purpose.
+```
+
+</CodeGroup>
+
+</HeroBand>
+
+<Band
+  taupe
+  title="One webhook in, one Chat thread out."
+  intro="Zoom sends every event for your app to a single endpoint. The adapter verifies it, works out whether it came from a channel or a DM, and hands your handlers an ordinary Chat thread."
+>
+
+<FeatureGrid items={[
+  {
+    label: "receive",
+    title: "Every event, one route",
+    body: "The endpoint answers Zoom's setup challenge, checks the HMAC signature against the raw request bytes, and turns bot_notification and team_chat.app_mention into Chat threads. Pass waitUntil and Zoom gets its 200 immediately.",
+  },
+  {
+    label: "send",
+    title: "Post, edit, delete",
+    body: "Replies go out as Zoom's structured content segments, with markdown converted on the way. A reply can be attached to a parent message through metadata.replyTo.",
+  },
+  {
+    label: "identify",
+    title: "Channel or DM, from the JID",
+    body: "A thread ID carries the Zoom JID it came from. Anything ending in @conference.xmpp.zoom.us is a channel; everything else is a direct message.",
+  },
+]} />
+
+</Band>
+
+<Band
+  title="Wire it up"
+  intro="Two files: the app, and the route Zoom posts to. Hand the request over untouched — reading the body first breaks signature checks for every event."
+>
+
+<div class="lp-split">
+<figure>
+<figcaption>lib/bot.ts</figcaption>
+
+```ts
+import { createMemoryState } from "@chat-adapter/state-memory";
+import { Chat } from "chat";
+import { createZoomAdapter } from "zoom-chat-adapter";
+
+export const bot = new Chat({
+  userName: "deploybot",
+  adapters: { zoom: createZoomAdapter() },
+  state: createMemoryState(),
+});
+
+bot.onNewMention(async (thread, message) => {
+  await thread.post(`Looking into ${message.text}…`);
+});
+```
+
+</figure>
+<figure>
+<figcaption>app/api/webhooks/zoom/route.ts</figcaption>
+
+```ts
+import { after } from "next/server";
+import { bot } from "@/lib/bot";
+
+export async function POST(request: Request) {
+  return bot.webhooks.zoom(request, { waitUntil: after });
+}
+```
+
+Credentials come from the environment, so `createZoomAdapter()` takes no arguments in most apps. A missing one throws at startup and names the variable to set.
+
+</figure>
+</div>
+
+</Band>
+
+<Band
+  taupe
+  title="What this adapter does, and what it refuses to pretend."
+  intro="Zoom's Team Chat app API covers less ground than Slack's or Discord's. Rather than fake the gaps, the unimplemented calls throw where you can see them."
+>
+
+<SupportLedger rows={[
+  { name: "thread.post()", status: "works", note: "Sends a message to the channel or DM the thread came from." },
+  { name: "editMessage / deleteMessage", status: "works", note: "Edits and removes a message the app sent." },
+  { name: "metadata.replyTo", status: "works", note: "Posts the message as a reply under a parent message." },
+  { name: "startTyping()", status: "noop", note: "Zoom has no typing indicator, so the call returns quietly." },
+  { name: "fetchMessages / fetchThread", status: "throws", note: "No message history. Keep what you need in your own state adapter." },
+  { name: "addReaction / removeReaction", status: "throws", note: "Bots cannot react to messages in Zoom Team Chat." },
+  { name: "parseMessage()", status: "throws", note: "Not implemented. Incoming messages are already parsed for you." },
+]} />
+
+</Band>
+
+<Band>
+
+<AtmosphericCard
+  variant="sky"
+  title="The whole adapter, written down."
+  body="Setup, webhooks, messaging, thread IDs, the full API, and an honest account of what Zoom's platform will not do. Every page also serves Markdown to your agent by adding .md to its URL."
+  cta="Read the docs"
+  href="./quickstart"
+/>
+
+</Band>
+
+<Band title="Where to go next">
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" href="./quickstart" icon="rocket">
+    An app receiving and sending messages in about ten minutes.
+  </Card>
+  <Card title="Marketplace setup" href="./marketplace-setup" icon="settings">
+    The Zoom app, its scopes, and testing through ngrok.
+  </Card>
+  <Card title="Configuration" href="./configuration" icon="sliders">
+    Every option, its environment variable, and what happens when it is missing.
+  </Card>
+  <Card title="Webhooks" href="./webhooks" icon="webhook">
+    Signature checks, the setup challenge, and responses Zoom expects.
+  </Card>
+  <Card title="Messaging" href="./messaging" icon="message-square">
+    Sending, editing, replies, and how formatting is converted.
+  </Card>
+  <Card title="API reference" href="./reference" icon="code">
+    Every exported function and method, with its exact behavior.
+  </Card>
+</CardGroup>
+
+</Band>
+
+<SiteFooter />
