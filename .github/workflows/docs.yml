@@ -40,3 +40,6 @@ jobs:
       # clean and that every internal link still resolves.
       - run: pnpm --filter docs build
       - run: pnpm --filter docs validate
+      # Every agent-facing artifact and the Accept: text/markdown routing the
+      # build wires into its Vercel config — see apps/docs/scripts.
+      - run: pnpm --filter docs verify
