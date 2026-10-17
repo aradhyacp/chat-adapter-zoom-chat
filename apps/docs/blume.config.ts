@@ -1,4 +1,5 @@
 import { defineConfig } from "blume";
+import { vercel } from "blume/analytics";
 import seoHead from "./integrations/seo-head.mjs";
 
 // design.md substitutes Inter 300 for the licensed Waldenburg Light, so the
@@ -10,6 +11,7 @@ const inter = {
 };
 
 export default defineConfig({
+  analytics: [vercel()],
   deployment: {
     // Left empty on purpose: Blume fills `site` in from the host's own env
     // (on Vercel, the production domain) and an explicit value would win over

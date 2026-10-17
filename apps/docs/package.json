@@ -10,6 +10,7 @@
     "validate": "blume validate"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "blume": "^2.2.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
