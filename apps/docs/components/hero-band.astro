@@ -1,0 +1,27 @@
+---
+// biome-ignore lint/correctness/noUnusedImports: Astro template expressions are opaque to this rule; the component is rendered in the markup.
+import ZoomThread from "./zoom-thread.astro";
+---
+
+<section class="lp">
+  <div class="lp-hero">
+    <div>
+      <h1>Teach your Chat SDK app to speak Zoom.</h1>
+      <p class="lp-lede">
+        Mentions, DMs and slash commands arrive as ordinary Chat threads, and
+        <code>thread.post()</code> sends the answer back to Zoom Team Chat.
+      </p>
+      <div class="lp-actions">
+        <a class="pill-cta pill-cta--ink" href="./quickstart">Get started</a>
+        <a class="pill-cta pill-cta--outline" href="./marketplace-setup">Set up the Zoom app</a>
+      </div>
+      <p class="lp-aside">A community package. Not published or supported by Zoom.</p>
+    </div>
+
+    <ZoomThread />
+  </div>
+
+  <div class="install-slot">
+    <slot />
+  </div>
+</section>

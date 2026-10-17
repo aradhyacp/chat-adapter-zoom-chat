@@ -1,0 +1,23 @@
+---
+interface Item {
+  body: string;
+  label?: string;
+  title: string;
+}
+// biome-ignore lint/correctness/noUnusedVariables: Astro template expressions are opaque to this rule; every binding below is rendered in the markup.
+const { items = [] as Item[] } = Astro.props;
+---
+
+<dl class="lp-rows">
+  {
+    items.map((item) => (
+      <div class="lp-row">
+        <dt>{item.label ?? ""}</dt>
+        <dd>
+          <b>{item.title}</b>
+          {item.body}
+        </dd>
+      </div>
+    ))
+  }
+</dl>

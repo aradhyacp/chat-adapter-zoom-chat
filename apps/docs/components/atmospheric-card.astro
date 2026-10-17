@@ -1,0 +1,42 @@
+---
+/**
+ * The one atmospheric moment per page (design.md Part II + III): an oversized
+ * blurred hue arc, cropped by the card, grain at overlay, and a scrim that
+ * bleeds past the text rather than boxing it.
+ */
+interface Props {
+  body?: string;
+  cta?: string;
+  href?: string;
+  title: string;
+  variant?: "sky" | "deep" | "soft";
+}
+// biome-ignore lint/correctness/noUnusedVariables: Astro template expressions are opaque to this rule; every binding below is rendered in the markup.
+const props = Astro.props as Props;
+
+// The grain tile lives in public/, so it needs the deployment base path.
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/`;
+// biome-ignore lint/correctness/noUnusedVariables: Astro template expressions are opaque to this rule; every binding below is rendered in the markup.
+const grain = `image-set(url("${base}noise.avif") type("image/avif"), url("${base}noise.png") type("image/png"))`;
+---
+
+<div
+  class={`atmos atmos--${props.variant ?? "sky"} grain atmos-card`}
+  style={`--grain-image:${grain};`}
+>
+  <div class="scrim-bottom"></div>
+  <div class="atmos-text">
+    <h2>{props.title}</h2>
+    {props.body && <p>{props.body}</p>}
+    {
+      props.cta && props.href && (
+        <p class="atmos-cta">
+          <a class="pill-cta pill-cta--light" href={props.href}>
+            {props.cta}
+          </a>
+        </p>
+      )
+    }
+    <slot />
+  </div>
+</div>
