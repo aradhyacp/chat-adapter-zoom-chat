@@ -1,0 +1,122 @@
+{
+  "redirects": [],
+  "headers": [
+    {
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/markdown; charset=utf-8"
+        }
+      ],
+      "source": "/(.*).md"
+    },
+    {
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/markdown; charset=utf-8"
+        }
+      ],
+      "source": "/(.*).mdx"
+    },
+    {
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        }
+      ],
+      "source": "/(.*).txt"
+    },
+    {
+      "headers": [
+        {
+          "key": "X-Powered-By",
+          "value": "Blume"
+        }
+      ],
+      "source": "/:path(.*)?"
+    },
+    {
+      "headers": [
+        {
+          "key": "Link",
+          "value": "</.well-known/api-catalog>; rel=\"api-catalog\"; type=\"application/linkset+json; profile=\\\"https://www.rfc-editor.org/info/rfc9727\\\"\", </.well-known/ai-catalog.json>; rel=\"ai-catalog\"; type=\"application/ai-catalog+json\", </openapi.json>; rel=\"service-desc\"; type=\"application/json\", </agent-readability.json>; rel=\"describedby\"; type=\"application/json\", </llms.txt>; rel=\"describedby\"; type=\"text/plain\", </index.md>; rel=\"alternate\"; type=\"text/markdown\""
+        }
+      ],
+      "source": "/"
+    },
+    {
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/linkset+json; profile=\"https://www.rfc-editor.org/info/rfc9727\""
+        }
+      ],
+      "source": "/.well-known/api-catalog"
+    },
+    {
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ],
+      "source": "/.well-known/ai-catalog.json"
+    },
+    {
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ],
+      "source": "/.well-known/ard.json"
+    },
+    {
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ],
+      "source": "/.well-known/api-catalog"
+    },
+    {
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/markdown; charset=utf-8"
+        }
+      ],
+      "source": "/.well-known/agent-skills/(.*).md"
+    },
+    {
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/gzip"
+        }
+      ],
+      "source": "/.well-known/agent-skills/(.*).tar.gz"
+    },
+    {
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "sandbox"
+        }
+      ],
+      "source": "/blume-assets/(.*).svg"
+    },
+    {
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ],
+      "source": "/blume-assets/(.*).svg"
+    }
+  ]
+}
