@@ -1,0 +1,52 @@
+---
+// biome-ignore lint/correctness/noUnusedVariables: Astro template expressions are opaque to this rule; every binding below is rendered in the markup.
+const { site } = Astro.props as { site?: { title?: string } };
+// biome-ignore lint/correctness/noUnusedVariables: Astro template expressions are opaque to this rule; every binding below is rendered in the markup.
+const home = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/`;
+---
+
+<a href={home} class="logo">
+  <svg class="logo-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="logo-blue" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#5a9bff"></stop>
+        <stop offset="1" stop-color="#1b55d8"></stop>
+      </linearGradient>
+    </defs>
+    <path
+      d="M3.5 7.2A3.7 3.7 0 0 1 7.2 3.5h9.6a3.7 3.7 0 0 1 3.7 3.7v6.1a3.7 3.7 0 0 1-3.7 3.7H9.9l-4 3.1a.7.7 0 0 1-1.1-.6v-2.8a3.7 3.7 0 0 1-1.3-2.8z"
+      fill="url(#logo-blue)"></path>
+    <path d="M8.6 9.4v5.2l4.6-2.6z" fill="#fff" opacity="0.94"></path>
+  </svg>
+  <span class="logo-word">{site?.title ?? "zoom-chat-adapter"}</span>
+</a>
+
+<script is:inline>
+  // The header's search hint reads ⌘K on Apple devices and Ctrl K elsewhere.
+  document.documentElement.dataset.modKey = /Mac|iPhone|iPad/.test(
+    navigator.platform || navigator.userAgent
+  )
+    ? "cmd"
+    : "ctrl";
+</script>
+
+<style>
+  .logo {
+    display: inline-flex;
+    gap: 9px;
+    align-items: center;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .logo-mark {
+    width: 23px;
+    height: 23px;
+  }
+
+  .logo-word {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+</style>

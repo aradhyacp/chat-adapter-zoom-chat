@@ -1,0 +1,74 @@
+---
+title: Webhooks
+description: The single Zoom endpoint — the setup challenge, signature checks, event dispatch, and answering Zoom quickly.
+---
+
+Zoom delivers everything a bot hears to one HTTP endpoint. Hand the request
+straight over:
+
+```ts
+// app/api/webhooks/zoom/route.ts
+import { after } from "next/server";
+import { bot } from "@/lib/bot";
+
+export async function POST(request: Request) {
+  return bot.webhooks.zoom(request, { waitUntil: after });
+}
+```
+
+<WebhookInspector />
+
+## Answer Zoom first, work after
+
+`waitUntil` — Next.js `after`, or a Cloudflare `ExecutionContext.waitUntil` —
+hands your event processing to the runtime so the `200` goes back immediately.
+Without it the response waits for your handlers to finish, and a slow handler
+becomes a slow webhook.
+
+## What comes back
+
+| Situation | Response |
+| --- | --- |
+| The body is not valid JSON | `400 Invalid JSON` |
+| The setup challenge (`endpoint.url_validation`) | `200` with `{ plainToken, encryptedToken }` |
+| Missing, stale, or mismatched signature | `401 Invalid signature` |
+| Handled or unrecognised event | `200 ok` |
+
+Return the response as it is. An unrecognised event is answered `200 ok` on
+purpose: Zoom retries anything else.
+
+## Events
+
+| Event | What it is |
+| --- | --- |
+| `endpoint.url_validation` | The challenge Zoom sends when you save the endpoint URL |
+| `bot_notification` | A DM, a slash command, or a message to the bot in a channel |
+| `team_chat.app_mention` | An @-mention of the bot in a channel |
+
+Both message events reach your `onNewMention` handlers: Zoom has no separate
+mention event for `bot_notification`, so the adapter marks those messages as
+mentions too and your handlers fire consistently with other platforms.
+
+## Signature checks
+
+Each event carries `x-zm-signature` and `x-zm-request-timestamp`. The adapter
+recomputes `v0:{timestamp}:{raw body}` as HMAC-SHA256 with your webhook secret
+token and compares it in constant time, rejecting anything signed more than five
+minutes ago.
+
+:::danger
+Read the body before `handleWebhook` and every event fails verification. A Web
+`Request` body can only be read once, and the signature covers the exact bytes
+Zoom sent — so a logger or middleware that calls `request.json()` first breaks
+all of it. Pass the untouched `Request`.
+:::
+
+If verification fails, the adapter writes the first 200 bytes of the body as hex
+to the logger at `debug` level. That is also where to look for the Unicode
+signature bug described in [Limitations](./limitations).
+
+## Before the bot is ready
+
+Events that arrive before `Chat` has initialized the adapter are logged and
+dropped rather than queued. In practice this only shows up if your endpoint is
+live before the bot is constructed.

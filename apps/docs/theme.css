@@ -1,0 +1,974 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   zoom-chat-adapter docs — ElevenLabs editorial system (design.md)
+
+   Part I   Foundations  · warm eggshell paper, warm near-black ink, Inter 300
+                           display at -0.02em, Inter 400/500 body at +0.01em,
+                           pill CTAs, hairlines, ~97% achromatic.
+   Part II  Atmosphere    · oversized blurred blobs on a hue arc, cropped.
+   Part III Grain + scrim · tiled noise at overlay, a scrim that follows text.
+
+   The atmosphere is spent in one place per page. Everything else is paper,
+   ink, and a hairline.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* — Blume core tokens, light — */
+  --blume-background: #fdfcfc;
+  --blume-foreground: #0c0a09;
+  --blume-muted: #f5f3f1;
+  --blume-muted-foreground: #4e4e4e;
+  --blume-border: #e7e5e4;
+  --blume-accent: #292524;
+  --blume-accent-foreground: #ffffff;
+  --blume-action: #292524;
+  --blume-action-foreground: #ffffff;
+  --blume-code-background: #f5f3f1;
+  --blume-content-width: 44rem;
+  --blume-radius: 0.75rem;
+  /* The font families come from `theme.fonts` in blume.config.ts — Blume
+     self-hosts them under generated family names, so don't restate them here. */
+
+  /* — Surfaces: eggshell → taupe → stone — */
+  --paper: #fdfcfc;
+  --paper-soft: #fafafa;
+  --canvas: #f5f5f5;
+  --taupe: #f5f3f1;
+  --surface-strong: #f0efed;
+  --stone: #ebe8e4;
+  --hairline: #e7e5e4;
+  --hairline-strong: #d6d3d1;
+
+  /* — Ink & text — */
+  --ink: #0c0a09;
+  --ink-pill: #292524;
+  --ink-pill-active: #0c0a09;
+  --graphite: #44403b;
+  --body: #4e4e4e;
+  --smoke: #777169;
+  --ash: #a59f97;
+  --on-dark: #ffffff;
+  --on-dark-soft: #a8a29e;
+
+  /* — Decoration only: never UI chrome (design.md §3) — */
+  --violet-spark: #0447ff;
+  --ember: #ff4704;
+  --orb-mint: #a7e5d3;
+  --orb-peach: #f4c5a8;
+  --orb-lavender: #c8b8e0;
+  --orb-sky: #a8c8e8;
+  --orb-rose: #e8b8c4;
+
+  /* — Shape & rhythm — */
+  --r-input: 6px;
+  --r-card: 16px;
+  --r-card-lg: 24px;
+  --r-pill: 9999px;
+  --rule: 1px solid var(--hairline);
+  --shadow-whisper:
+    rgb(0 0 0 / 40%) 0 0 1px 0, rgb(0 0 0 / 4%) 0 1px 1px 0,
+    rgb(0 0 0 / 4%) 0 2px 4px 0;
+
+  /* Grain tile; .astro components re-set this with the deployment base path. */
+  --grain-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+:root[data-theme="dark"] {
+  --blume-background: #0c0a09;
+  --blume-foreground: #fafaf9;
+  --blume-muted: #1c1917;
+  --blume-muted-foreground: #a8a29e;
+  --blume-border: #292524;
+  --blume-accent: #fafaf9;
+  --blume-accent-foreground: #0c0a09;
+  --blume-action: #fafaf9;
+  --blume-action-foreground: #0c0a09;
+  --blume-code-background: #161312;
+
+  --paper: #0c0a09;
+  --paper-soft: #121010;
+  --canvas: #0c0a09;
+  --taupe: #1c1917;
+  --surface-strong: #221e1c;
+  --stone: #292524;
+  --hairline: #292524;
+  --hairline-strong: #3a3431;
+
+  --ink: #fafaf9;
+  --ink-pill: #fafaf9;
+  --ink-pill-active: #ffffff;
+  --graphite: #d6d3d1;
+  --body: #b8b2ac;
+  --smoke: #a8a29e;
+  --ash: #78716c;
+  --shadow-whisper: rgb(0 0 0 / 50%) 0 1px 2px 0;
+}
+
+/* ── Typography ──────────────────────────────────────────────────────────
+   Display: Inter 300 at -0.02em (design.md §4 — the whisper weight is the
+   signature; never bold it). Body: Inter 400/500 at +0.01em. The opposite
+   tracking directions are deliberate.                                     */
+
+body {
+  font-feature-settings: "cv05" 1;
+  letter-spacing: 0.01em;
+}
+
+h1,
+h2,
+.font-display {
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: clamp(2rem, 1.3rem + 2.4vw, 3rem);
+  line-height: 1.08;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 1.2rem + 1.1vw, 2rem);
+  line-height: 1.17;
+  letter-spacing: -0.02em;
+}
+
+h3,
+h4 {
+  font-family: var(--blume-font-body);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+h3 {
+  font-size: 1.125rem;
+  line-height: 1.44;
+}
+
+/* :where() keeps this at zero specificity so later rules win cleanly. */
+:where(article p, article li) {
+  letter-spacing: 0.01em;
+}
+
+/* A `custom` page has no prose container, so loose Markdown inside a band
+   needs its own type. :where() keeps these below the band's own classes. */
+:where(.lp-band) p {
+  max-width: 68ch;
+  margin: 16px 0 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--body);
+}
+
+:where(.lp-band) a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--hairline-strong);
+  text-underline-offset: 3px;
+}
+
+:where(.lp-band) :not(pre) > code {
+  padding: 1px 5px;
+  font-family: var(--blume-font-mono);
+  font-size: 0.875em;
+  background: var(--surface-strong);
+  border-radius: 4px;
+}
+
+/* Prose links: ink with a hairline underline, not an accent color. */
+article a:not([class]) {
+  color: var(--ink);
+  text-decoration-color: var(--hairline-strong);
+  text-underline-offset: 3px;
+}
+
+article a:not([class]):hover {
+  text-decoration-color: var(--ink);
+}
+
+/* Tables read as a ledger: hairline rows, mono-ish headers, no fills. */
+article table {
+  font-size: 0.9375rem;
+}
+
+article thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--smoke);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Editorial primitives ────────────────────────────────────────────── */
+
+.pill-cta {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  height: 40px;
+  padding: 0 20px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  border-radius: var(--r-pill);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.pill-cta--ink {
+  color: var(--blume-accent-foreground);
+  background: var(--ink-pill);
+  border: 1px solid var(--ink-pill);
+}
+
+.pill-cta--ink:hover {
+  background: var(--ink-pill-active);
+}
+
+.pill-cta--outline {
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--hairline-strong);
+}
+
+.pill-cta--outline:hover {
+  border-color: var(--ink);
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--graphite);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--surface-strong);
+  border-radius: var(--r-pill);
+}
+
+.mono-note {
+  font-family: var(--blume-font-mono);
+  font-size: 13px;
+  line-height: 1.69;
+  color: var(--smoke);
+  letter-spacing: 0;
+}
+
+.taupe-card {
+  padding: 24px;
+  background: var(--taupe);
+  border-radius: var(--r-card);
+}
+
+.hairline {
+  border: var(--rule);
+}
+
+/* ── Part II — the atmospheric field ─────────────────────────────────────
+   Oversized blobs on one hue arc, blurred past reason, then cropped by the
+   card (design.md §15–16.3). Blobs are painted on ::before at 130% so the
+   blur has nothing to fade into but more color.                           */
+
+.atmos {
+  position: relative;
+  overflow: hidden;
+  background: var(
+    --atmos-base,
+    linear-gradient(165deg, #8b98c0, #bb7a79 46%, #ef934a)
+  );
+  isolation: isolate;
+}
+
+.atmos::before {
+  position: absolute;
+  inset: -15%;
+  z-index: 0;
+  content: "";
+  background: var(--atmos-blobs);
+  filter: blur(var(--atmos-blur, 64px));
+  transform: translateZ(0);
+}
+
+/* Sky — the palettes are blues the way a sky is blue: violet-indigo at the
+   zenith, azure through the middle, a pale cyan horizon. The hue still travels
+   (indigo → azure → cyan), which is what keeps it from reading as one colour
+   dimmed down (design.md §12). */
+.atmos--sky {
+  --atmos-base: linear-gradient(
+    168deg,
+    #16205c 0%,
+    #16398a 24%,
+    #1d6ac4 52%,
+    #4f9fd8 78%,
+    #a8cfe9 100%
+  );
+  --atmos-blobs:
+    radial-gradient(64% 58% at 8% 10%, #1a1f5e 0%, transparent 72%),
+    radial-gradient(58% 54% at 52% 6%, #16398a 0%, transparent 70%),
+    radial-gradient(66% 60% at 88% 30%, #1d6ac4 0%, transparent 72%),
+    radial-gradient(70% 62% at 22% 94%, #7fb8e2 0%, transparent 70%),
+    radial-gradient(60% 56% at 92% 96%, #a8cfe9 0%, transparent 72%),
+    radial-gradient(40% 36% at 64% 66%, #2f8fb5 0%, transparent 70%);
+}
+
+/* Deep — late dusk: navy overhead, one band of cobalt still lit. */
+.atmos--deep {
+  --atmos-base: linear-gradient(
+    170deg,
+    #050c22 0%,
+    #0b1f4d 30%,
+    #11306f 58%,
+    #1b56a8 82%,
+    #3f86cf 100%
+  );
+  --atmos-blobs:
+    radial-gradient(62% 58% at 10% 12%, #050c22 0%, transparent 72%),
+    radial-gradient(64% 58% at 76% 20%, #0e2a5c 0%, transparent 72%),
+    radial-gradient(66% 60% at 30% 92%, #1b56a8 0%, transparent 70%),
+    radial-gradient(56% 52% at 94% 92%, #3f86cf 0%, transparent 72%),
+    radial-gradient(38% 34% at 58% 62%, #2a4f93 0%, transparent 70%);
+}
+
+/* Soft — midday: pale overhead, deeper blue pooling in one corner. */
+.atmos--soft {
+  --atmos-base: linear-gradient(
+    165deg,
+    #2d6fc4 0%,
+    #5d9ddc 32%,
+    #8fc2ea 62%,
+    #c3def2 86%,
+    #e4f0fa 100%
+  );
+  --atmos-blobs:
+    radial-gradient(62% 56% at 12% 14%, #2159a8 0%, transparent 72%),
+    radial-gradient(60% 56% at 80% 18%, #5d9ddc 0%, transparent 72%),
+    radial-gradient(68% 60% at 28% 92%, #a8cfe9 0%, transparent 70%),
+    radial-gradient(56% 52% at 92% 90%, #e4f0fa 0%, transparent 72%),
+    radial-gradient(42% 38% at 60% 58%, #3f92c7 0%, transparent 70%);
+}
+
+.grain::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  content: "";
+  background-image: var(--grain-image);
+  background-size: 128px 128px;
+  mix-blend-mode: overlay;
+  opacity: 0.3;
+}
+
+/* The scrim bleeds past the text on every side and fades into the image —
+   never a visible box (design.md §24). */
+.scrim-bottom {
+  position: absolute;
+  right: -32px;
+  bottom: -24px;
+  left: -32px;
+  z-index: 2;
+  height: 68%;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      120% 90% at 18% 110%,
+      rgb(0 0 0 / 52%) 0%,
+      rgb(0 0 0 / 0%) 70%
+    ),
+    linear-gradient(to top, rgb(0 0 0 / 42%), rgb(0 0 0 / 0%));
+}
+
+/* ── Landing composition ─────────────────────────────────────────────── */
+
+.lp {
+  max-width: 1200px;
+  padding: 0 clamp(20px, 5vw, 64px);
+  margin: 0 auto;
+}
+
+.lp-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(32px, 5vw, 64px);
+  align-items: center;
+  padding: clamp(48px, 7vw, 96px) 0 clamp(40px, 6vw, 72px);
+}
+
+.lp-hero h1 {
+  max-width: 17ch;
+  margin: 20px 0 0;
+  font-size: clamp(2.25rem, 1.1rem + 4.2vw, 4rem);
+  line-height: 1.05;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.lp-lede {
+  max-width: 44ch;
+  margin: 20px 0 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+.lp-aside {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--smoke);
+}
+
+.lp-lede code {
+  padding: 2px 6px;
+  font-family: var(--blume-font-mono);
+  font-size: 0.875em;
+  color: var(--ink);
+  background: var(--surface-strong);
+  border-radius: 5px;
+}
+
+.lp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.lp-band {
+  padding: clamp(48px, 7vw, 96px) 0;
+  border-top: var(--rule);
+}
+
+.lp-band--taupe {
+  background: var(--taupe);
+  border-top: none;
+}
+
+.lp-band h2 {
+  max-width: 20ch;
+  margin: 0;
+  color: var(--ink);
+}
+
+.lp-band-intro {
+  max-width: 46ch;
+  margin: 16px 0 0;
+  color: var(--body);
+}
+
+/* The install block sits centred under the hero. The box and its copy button
+   are Blume's own code block and Prompt row — only the measure is ours. */
+.install-slot {
+  max-width: 44rem;
+  padding-bottom: clamp(32px, 5vw, 56px);
+  margin: 0 auto;
+}
+
+.install-slot > :first-child {
+  margin-top: 0;
+}
+
+/* The colour change between bands is the separation; no rule on top of it. */
+.lp-band--taupe + .lp-band {
+  border-top: none;
+}
+
+/* Capability rows: hairline-separated, not a grid of identical cards. */
+.lp-rows {
+  margin-top: 40px;
+  border-top: var(--rule);
+}
+
+.lp-row {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: clamp(16px, 3vw, 48px);
+  padding: 24px 0;
+  border-bottom: var(--rule);
+}
+
+.lp-row dt {
+  font-family: var(--blume-font-mono);
+  font-size: 13px;
+  line-height: 1.69;
+  color: var(--smoke);
+  letter-spacing: 0;
+}
+
+.lp-row dd {
+  max-width: 62ch;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--body);
+}
+
+.lp-row dd b {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.lp-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: clamp(20px, 3vw, 40px);
+  margin-top: 40px;
+}
+
+.lp-split > figure {
+  margin: 0;
+}
+
+.lp-split figcaption {
+  margin-bottom: 10px;
+  font-family: var(--blume-font-mono);
+  font-size: 13px;
+  color: var(--smoke);
+}
+
+/* Support ledger: a dot, a name, a plain-language verdict. */
+.lp-ledger {
+  width: 100%;
+  margin-top: 32px;
+  font-size: 0.9375rem;
+  border-collapse: collapse;
+}
+
+.lp-ledger th {
+  padding: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--smoke);
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: var(--rule);
+}
+
+.lp-ledger td {
+  padding: 14px 0;
+  vertical-align: baseline;
+  color: var(--body);
+  border-bottom: var(--rule);
+}
+
+.lp-ledger td:first-child {
+  width: 16rem;
+  padding-right: 24px;
+  font-family: var(--blume-font-mono);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.lp-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 10px;
+  vertical-align: 0.1em;
+  background: var(--ink);
+  border-radius: var(--r-pill);
+}
+
+.lp-dot--hollow {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+}
+
+.lp-dot--half {
+  background: linear-gradient(90deg, var(--ink) 50%, transparent 50%);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+}
+
+/* The atmospheric CTA card. */
+.atmos-card {
+  display: flex;
+  align-items: flex-end;
+  min-height: clamp(280px, 34vw, 380px);
+  padding: clamp(28px, 4vw, 48px);
+  border-radius: var(--r-card-lg);
+}
+
+.atmos-text {
+  position: relative;
+  z-index: 3;
+  max-width: 34rem;
+}
+
+.atmos-text h2 {
+  margin: 0;
+  font-size: clamp(1.75rem, 1.1rem + 2.2vw, 2.75rem);
+  font-weight: 300;
+  line-height: 1.1;
+  color: #fff;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.atmos-text p {
+  max-width: 42ch;
+  margin: 14px 0 0;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: rgb(255 255 255 / 86%);
+  text-wrap: pretty;
+}
+
+.atmos-cta {
+  margin-top: 26px;
+}
+
+.pill-cta--light {
+  color: #fff;
+  background: rgb(255 255 255 / 10%);
+  border: 1px solid rgb(255 255 255 / 55%);
+  backdrop-filter: blur(2px);
+}
+
+.pill-cta--light:hover {
+  background: rgb(255 255 255 / 18%);
+  border-color: #fff;
+}
+
+/* ── Interactive demos (islands) ─────────────────────────────────────── */
+
+.demo {
+  padding: 20px;
+  margin: 24px 0;
+  background: var(--taupe);
+  border: var(--rule);
+  border-radius: var(--r-card);
+}
+
+.demo-label {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--smoke);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.demo-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--blume-font-mono);
+  font-size: 13px;
+  line-height: 1.69;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-input);
+}
+
+.demo-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.demo-choice {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  background: var(--paper);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-pill);
+}
+
+.demo-choice[aria-pressed="true"] {
+  color: var(--blume-accent-foreground);
+  background: var(--ink-pill);
+  border-color: var(--ink-pill);
+}
+
+.demo-out {
+  padding: 16px;
+  margin-top: 12px;
+  background: var(--paper);
+  border: var(--rule);
+  border-radius: var(--r-card);
+}
+
+.demo-out-label {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--smoke);
+}
+
+.demo-json {
+  margin: 0;
+  overflow-x: auto;
+  font-family: var(--blume-font-mono);
+  font-size: 12.5px;
+  line-height: 1.69;
+  color: var(--graphite);
+  white-space: pre;
+}
+
+.demo-note {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--smoke);
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────── */
+
+.ft {
+  padding: 56px 0 48px;
+  margin-top: 80px;
+  font-size: 15px;
+  color: var(--body);
+  border-top: var(--rule);
+}
+
+.ft-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+  gap: 32px;
+  max-width: 1200px;
+  padding: 0 clamp(20px, 5vw, 64px);
+  margin: 0 auto;
+}
+
+.ft-about {
+  max-width: 32ch;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.ft-marks {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.ft-mark {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  padding: 7px 13px 7px 11px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-pill);
+  transition: border-color 0.18s ease;
+}
+
+.ft-mark:hover {
+  color: var(--ink);
+  text-decoration: none;
+  border-color: var(--ink);
+}
+
+.ft h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: 0;
+}
+
+.ft ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.ft li + li {
+  margin-top: 8px;
+}
+
+.ft a {
+  color: var(--body);
+  text-decoration: none;
+}
+
+.ft a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ft-colophon {
+  max-width: 1200px;
+  padding: 24px clamp(20px, 5vw, 64px) 0;
+  margin: 32px auto 0;
+  font-size: 13px;
+  color: var(--smoke);
+  border-top: var(--rule);
+}
+
+/* ── Quality floor ───────────────────────────────────────────────────── */
+
+/* The shell is header / main / footer, so a page with little content (the
+   404, say) still pushes its footer to the bottom of the viewport. */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* The content region is a <main> on the generated pages and a grid <div> on
+   the docs shell, so grow whichever one is there. */
+body > main,
+body > div {
+  flex: 1 0 auto;
+}
+
+body > footer {
+  margin-top: auto;
+}
+
+:where(a, button, input, textarea, summary):focus-visible {
+  outline: 1.5px solid color-mix(in oklab, var(--ink) 50%, transparent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Blume's search dialog styles its own focus and selection; an extra ring
+   inside it just adds noise. */
+[data-blume-search-dialog] :where(a, button, input, textarea):focus-visible,
+[data-blume-search-dialog]:focus-visible {
+  outline: none;
+}
+
+[data-blume-search-dialog] [role="option"][aria-selected="true"] {
+  background: var(--surface-strong);
+}
+
+/* The search trigger is a field-shaped button, not a bare icon: the whole
+   pill — icon, label, and the shortcut — is the hit area. */
+[data-blume-search-open] {
+  gap: 8px;
+  width: auto;
+  min-width: 0;
+  height: 36px;
+  padding: 0 8px 0 11px;
+  color: var(--smoke);
+  background: var(--paper);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-pill);
+}
+
+[data-blume-search-open]:hover {
+  color: var(--ink);
+  background: var(--surface-strong);
+  border-color: var(--hairline-strong);
+}
+
+[data-blume-search-open]::before {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1;
+  content: "Search";
+}
+
+header [data-blume-search-open]::after {
+  /* This is also the header tooltip's pseudo-element, so every property it
+     sets to hide and float the tooltip has to be undone here. */
+  position: static;
+  inset: auto;
+  z-index: auto;
+  visibility: visible;
+  padding: 3px 6px;
+  font-family: var(--blume-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--smoke);
+  content: "⌘K";
+  background: var(--surface-strong);
+  border-radius: 5px;
+  opacity: 1;
+  transition: none;
+}
+
+:root[data-mod-key="ctrl"] header [data-blume-search-open]::after {
+  content: "Ctrl K";
+}
+
+/* On a phone there is only room for the icon. */
+@media (width < 40rem) {
+  [data-blume-search-open] {
+    width: 36px;
+    padding: 0;
+  }
+
+  [data-blume-search-open]::before,
+  header [data-blume-search-open]::after {
+    display: none;
+  }
+}
+
+/* The repository belongs in the header on a docs site. Blume puts header
+   actions in as text links, so this one is dressed as an icon button and kept
+   visible at every width. */
+header a[href*="github.com"] {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0 !important;
+  overflow: hidden;
+  font-size: 0;
+  color: var(--graphite);
+  text-indent: -999px;
+  border-radius: 9999px;
+}
+
+header a[href*="github.com"]::before {
+  width: 26px;
+  height: 26px;
+  text-indent: 0;
+  content: "";
+  background-color: currentcolor;
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.55v-2.1c-3.2.7-3.88-1.37-3.88-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.56-.3-5.25-1.28-5.25-5.7 0-1.26.45-2.29 1.19-3.1-.12-.3-.52-1.47.11-3.07 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.6.23 2.78.12 3.07.74.81 1.18 1.84 1.18 3.1 0 4.43-2.69 5.4-5.26 5.69.41.36.78 1.06.78 2.14v3.17c0 .3.21.66.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+header a[href*="github.com"]:hover {
+  color: var(--ink);
+  background: var(--surface-strong);
+}
+
+@media (width <= 860px) {
+  .lp-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  .lp-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .lp-ledger td:first-child {
+    width: 11rem;
+  }
+
+  .ft-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill-cta {
+    transition: none;
+  }
+}

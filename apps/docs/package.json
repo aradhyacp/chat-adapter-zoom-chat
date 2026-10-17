@@ -1,0 +1,17 @@
+{
+  "name": "docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "blume build",
+    "dev": "blume dev",
+    "doctor": "blume doctor",
+    "preview": "blume preview",
+    "validate": "blume validate"
+  },
+  "dependencies": {
+    "blume": "^2.2.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  }
+}

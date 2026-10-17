@@ -46,9 +46,13 @@
   ],
   "scripts": {
     "build": "tsup",
+    "build:all": "pnpm build && turbo run build --filter=docs",
+    "build:docs": "turbo run build --filter=docs",
     "check": "ultracite check",
     "clean": "rm -rf dist",
     "dev": "tsup --watch",
+    "dev:docs": "turbo run dev --filter=docs",
+    "docs": "turbo run dev --filter=docs",
     "fix": "ultracite fix",
     "prepare": "husky",
     "prepublish": "pnpm build && pnpm test && pnpm check && pnpm typecheck && echo \"allowed to publish\"",
@@ -67,10 +71,12 @@
     "@vitest/coverage-v8": "^4.0.18",
     "husky": "^9.1.7",
     "tsup": "^8.3.5",
+    "turbo": "^2.5.4",
     "typescript": "^5.7.2",
     "ultracite": "8.0.1",
     "vitest": "^4.0.18"
   },
+  "packageManager": "pnpm@11.0.9",
   "publishConfig": {
     "access": "public"
   }

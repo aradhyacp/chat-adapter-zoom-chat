@@ -1,7 +1,10 @@
 node_modules/
 dist/
 coverage/
-docs/
+/docs/
+.turbo/
+apps/docs/.blume/
+apps/docs/dist/
 
 .DS_Store
 *.local

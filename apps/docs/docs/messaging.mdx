@@ -1,0 +1,83 @@
+---
+title: Messaging
+description: Sending, editing, deleting, and replying — what each call puts on the wire, and how it fails.
+---
+
+<SupportLedger rows={[
+  { name: "thread.post()", status: "works", note: "Sends a message to the channel or DM the thread came from." },
+  { name: "editMessage / deleteMessage", status: "works", note: "Changes or removes a message the bot sent." },
+  { name: "metadata.replyTo", status: "works", note: "Posts the message as a reply under a parent message." },
+  { name: "startTyping()", status: "noop", note: "Zoom has no typing indicator, so the call returns quietly." },
+  { name: "fetchMessages / fetchThread", status: "throws", note: "No message history. Keep what you need in your own state adapter." },
+  { name: "addReaction / removeReaction", status: "throws", note: "Bots cannot react to messages in Zoom Team Chat." },
+  { name: "parseMessage()", status: "throws", note: "Not implemented. Incoming messages are already parsed for you." },
+]} />
+
+The three calls that throw do so on purpose, so a missing feature shows up while
+you are writing the code rather than in production. Do not write against them.
+
+## Sending a message
+
+```ts
+bot.onNewMention(async (thread, message) => {
+  await thread.post("On it.");
+});
+```
+
+The reply is converted to Zoom's content segments (see
+[Formatting](./formatting)) and posted to `/v2/im/chat/messages` with the
+account ID, the bot's JID, the thread's channel JID, and — when the adapter has
+one — the JID of the person whose message started the thread. Zoom's chatbot API
+expects that last field, and the adapter remembers it from the webhook that
+created the thread. A thread the current process never received a webhook for is
+sent without it.
+
+An empty message is never sent. Zoom rejects empty content, so the call returns a
+placeholder result instead of making a request.
+
+## Replying under a message
+
+```ts
+await adapter.postMessage(threadId, {
+  raw: "Thanks — rolling that back now.",
+  metadata: { replyTo: "parent-message-id" },
+});
+```
+
+`metadata.replyTo` becomes `reply_main_message_id` on the Zoom call.
+
+:::warning
+A reply posted into a one-to-one DM thread will send, but Zoom never delivers a
+webhook when the person replies back in that thread — so your bot will not see
+the other half of the conversation. In a channel, replies arrive normally.
+:::
+
+## Editing and deleting
+
+```ts
+await adapter.editMessage(threadId, messageId, { raw: "Rolled back." });
+await adapter.deleteMessage(threadId, messageId);
+```
+
+Both act on messages the bot sent. Zoom answers an edit with `204 No Content`,
+so the result carries the message ID you passed in and an empty body.
+
+## When Zoom says no
+
+Any non-2xx response throws:
+
+```
+Error: ZoomAdapter: postMessage failed with HTTP 401
+```
+
+The operation name in the message is the call that failed. Zoom's own response
+body is written to the logger at `debug` level rather than into the error, so
+turn debug logging on when a status code alone is not enough. A `401` here is
+almost always the wrong OAuth grant — see
+[Troubleshooting](./troubleshooting).
+
+## Streaming
+
+Streamed output is buffered, not incremental: the text accumulates and is sent
+as a single message when the stream finishes. Zoom has no partial-message API to
+stream into.

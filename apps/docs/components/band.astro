@@ -1,0 +1,17 @@
+---
+interface Props {
+  intro?: string;
+  taupe?: boolean;
+  title?: string;
+}
+// biome-ignore lint/correctness/noUnusedVariables: Astro template expressions are opaque to this rule; every binding below is rendered in the markup.
+const { intro, taupe = false, title } = Astro.props as Props;
+---
+
+<section class={taupe ? "lp-band lp-band--taupe" : "lp-band"}>
+  <div class="lp">
+    {title && <h2>{title}</h2>}
+    {intro && <p class="lp-band-intro">{intro}</p>}
+    <slot />
+  </div>
+</section>

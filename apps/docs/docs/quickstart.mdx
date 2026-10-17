@@ -1,0 +1,99 @@
+---
+title: Quickstart
+description: Get a Zoom Team Chat bot receiving and sending messages in about ten minutes.
+---
+
+You will need a Zoom account with developer access and somewhere Zoom can reach
+your app — a deployed URL, or an ngrok tunnel while you are working locally.
+
+<Steps>
+
+<Step title="Install">
+
+```bash
+pnpm add zoom-chat-adapter chat @chat-adapter/state-memory
+```
+
+`chat` comes along as a dependency, but install it explicitly: your code imports
+`Chat` from it directly. `@chat-adapter/state-memory` is not a dependency at
+all, and relying on a transitive copy is fragile.
+
+</Step>
+
+<Step title="Collect five credentials">
+
+```bash
+ZOOM_CLIENT_ID=
+ZOOM_CLIENT_SECRET=
+ZOOM_ACCOUNT_ID=
+ZOOM_ROBOT_JID=
+ZOOM_WEBHOOK_SECRET_TOKEN=
+```
+
+[Marketplace setup](./marketplace-setup) shows where each one lives in the Zoom
+dashboard. All five are required — a missing one stops the app at startup with a
+message naming the variable.
+
+</Step>
+
+<Step title="Create the bot">
+
+```ts lib/bot.ts
+import { createMemoryState } from "@chat-adapter/state-memory";
+import { Chat } from "chat";
+import { createZoomAdapter } from "zoom-chat-adapter";
+
+export const bot = new Chat({
+  userName: "mybot",
+  adapters: { zoom: createZoomAdapter() },
+  state: createMemoryState(),
+});
+
+bot.onNewMention(async (thread, message) => {
+  await thread.post("Hello from Zoom!");
+});
+```
+
+A `state` adapter is not optional: `Chat` connects to it during initialization
+and the first webhook crashes without one. In-memory state is fine to start
+with; swap it for a durable one before you ship.
+
+</Step>
+
+<Step title="Add the webhook route">
+
+```ts app/api/webhooks/zoom/route.ts
+import { after } from "next/server";
+import { bot } from "@/lib/bot";
+
+export async function POST(request: Request) {
+  return bot.webhooks.zoom(request, { waitUntil: after });
+}
+```
+
+Pass the request through untouched and return what comes back. `waitUntil`
+(Next.js `after`, or a Cloudflare `ExecutionContext.waitUntil`) lets Zoom have
+its response straight away while your handler keeps working.
+
+</Step>
+
+<Step title="Point Zoom at your machine">
+
+```bash
+ngrok http 3000
+```
+
+Use the `https://` forwarding URL as both the Bot Endpoint URL and the event
+subscription URL in your Marketplace app, then @-mention the bot in a channel.
+A reply in Zoom means all five credentials, the signature check, and your
+handler are working.
+
+</Step>
+
+</Steps>
+
+## Next
+
+- [Configuration](./configuration) — every option and its environment variable
+- [Messaging](./messaging) — replies, edits, and threaded replies
+- [Limitations](./limitations) — what Zoom will not let a bot do

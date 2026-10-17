@@ -1,0 +1,429 @@
+---
+/**
+ * A Zoom Team Chat thread, drawn as the reader sees it in Zoom, looping so the
+ * exchange plays out: the message is typed out, the app answers, both clear,
+ * and it starts again.
+ *
+ * The app's reply is shaped like real adapter output — one fully bold paragraph
+ * (the only case that carries `style.bold`) followed by bullet segments, which
+ * is exactly what `toZoomContentBody` emits for a bold line plus a list.
+ */
+interface Props {
+  channel?: string;
+  foot?: string;
+}
+// biome-ignore lint/correctness/noUnusedVariables: Astro template expressions are opaque to this rule; every binding below is rendered in the markup.
+const { channel = "release-eng", foot } = Astro.props as Props;
+---
+
+<div class="zt">
+  <div class="zt-head">
+    <span class="zt-mark" aria-hidden="true"></span>
+    <span class="zt-channel">{channel}</span>
+    <span class="zt-chip">Team Chat</span>
+  </div>
+
+  <div class="zt-stream">
+    <div class="zt-msg zt-ask">
+      <span class="zt-avatar" aria-hidden="true">AC</span>
+      <div>
+        <p class="zt-name">Aradhya CP <span>9:41</span></p>
+        <p class="zt-bubble"><span class="zt-typed"><span class="zt-typed-text">@deploybot status api-gateway</span></span></p>
+      </div>
+    </div>
+
+    <div class="zt-msg zt-answer">
+      <span class="zt-avatar zt-avatar--app" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+          <path d="M4 8a3 3 0 0 1 3-3h7a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z" fill="currentColor"></path>
+          <path d="M18 9.6l3-1.9v8.6l-3-1.9z" fill="currentColor"></path>
+        </svg>
+      </span>
+      <div>
+        <p class="zt-name">deploybot <span class="zt-badge">app</span> <span>9:41</span></p>
+        <div class="zt-reply">
+          <span class="zt-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <p class="zt-bubble zt-bubble--app">
+            <b>api-gateway is live in production</b>
+            <span>• Released 12 minutes ago by aradhya@acme.com</span>
+            <span>• Build 4812 · commit <code>9f2ac1c</code></span>
+            <span>• Health checks passing in all three regions</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="zt-foot">{foot ?? "bot_notification → thread.post() → POST /v2/im/chat/messages"}</p>
+</div>
+
+<style>
+  /* Zoom's own blue is the product colour here; the page around it stays ink
+     and paper. Tints are mixed from it so dark mode follows along. */
+  .zt {
+    --zoom: #0b5cff;
+    --zoom-soft: color-mix(in oklab, var(--zoom) 8%, var(--paper));
+    --zoom-line: color-mix(in oklab, var(--zoom) 22%, transparent);
+
+    position: relative;
+    padding: 18px 18px 14px;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-card-lg);
+    box-shadow:
+      0 1px 2px rgb(12 10 9 / 4%),
+      0 12px 32px -18px rgb(11 92 255 / 28%);
+  }
+
+  .zt-head {
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .zt-mark {
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(140deg, #4c8dff, #0b5cff 70%);
+    border-radius: 7px;
+  }
+
+  .zt-channel {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .zt-channel::before {
+    margin-right: 1px;
+    color: var(--smoke);
+    content: "#";
+  }
+
+  .zt-chip {
+    margin-left: auto;
+    padding: 3px 9px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--zoom);
+    background: var(--zoom-soft);
+    border-radius: 9999px;
+  }
+
+  .zt-stream {
+    min-height: 196px;
+    padding: 14px 0 4px;
+  }
+
+  .zt-msg {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    padding: 5px 0;
+  }
+
+  .zt-avatar {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--graphite);
+    background: var(--surface-strong);
+    border-radius: 9999px;
+  }
+
+  .zt-avatar--app {
+    color: #fff;
+    background: linear-gradient(140deg, #4c8dff, #0b5cff 72%);
+  }
+
+  .zt-name {
+    margin: 2px 0 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .zt-name span {
+    margin-left: 5px;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--smoke);
+  }
+
+  .zt-badge {
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--zoom);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: var(--zoom-soft);
+    border-radius: 9999px;
+  }
+
+  .zt-bubble {
+    display: inline-block;
+    max-width: 100%;
+    padding: 9px 12px;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--graphite);
+    background: var(--surface-strong);
+    border-radius: 4px 12px 12px 12px;
+  }
+
+  .zt-bubble--app {
+    color: var(--ink);
+    background: var(--zoom-soft);
+    border: 1px solid var(--zoom-line);
+  }
+
+  .zt-bubble b,
+  .zt-bubble--app span {
+    display: block;
+  }
+
+  .zt-bubble b {
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  .zt-bubble code {
+    font-family: var(--blume-font-mono);
+    font-size: 12.5px;
+    color: var(--zoom);
+  }
+
+  .zt-foot {
+    padding-top: 12px;
+    margin: 0;
+    font-family: var(--blume-font-mono);
+    font-size: 11.5px;
+    color: var(--smoke);
+    border-top: 1px solid var(--hairline);
+  }
+
+  /* The app's typing indicator and its message occupy the same cell, so the
+     swap between them moves nothing. */
+  .zt-reply {
+    display: grid;
+    justify-items: start;
+  }
+
+  .zt-reply > * {
+    grid-area: 1 / 1;
+  }
+
+  .zt-dots {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    padding: 11px 13px;
+    background: var(--zoom-soft);
+    border: 1px solid var(--zoom-line);
+    border-radius: 4px 12px 12px 12px;
+  }
+
+  .zt-dots i {
+    width: 5px;
+    height: 5px;
+    background: var(--zoom);
+    border-radius: 9999px;
+    animation: zt-dot 1.1s ease-in-out infinite;
+  }
+
+  .zt-dots i:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .zt-dots i:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  /* One 13s cycle: the message types itself out, the app thinks, the app
+     answers, both clear. Everything shares the duration, so the schedule reads
+     as percentages of one timeline. */
+  .zt-typed {
+    position: relative;
+    display: inline-block;
+  }
+
+  /* Revealed by clipping its own box, so it stops exactly at the last
+     character — a width animation in `ch` would overshoot into blank space. */
+  .zt-typed-text {
+    display: inline-block;
+    animation: zt-type 13s steps(29, end) infinite backwards;
+  }
+
+  .zt-typed::after {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 0;
+    width: 1.5px;
+    content: "";
+    background: var(--zoom);
+    animation:
+      zt-caret-move 13s steps(29, end) infinite,
+      zt-caret-hide 13s step-end infinite;
+  }
+
+  .zt-ask {
+    animation: zt-ask 13s ease-in-out infinite;
+  }
+
+  .zt-answer {
+    animation: zt-answer 13s ease-in-out infinite backwards;
+  }
+
+  .zt-dots {
+    animation: zt-dots-out 13s step-end infinite backwards;
+  }
+
+  .zt-bubble--app {
+    animation: zt-bubble-in 13s ease-out infinite backwards;
+  }
+
+  @keyframes zt-ask {
+    0% {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    3%,
+    88% {
+      opacity: 1;
+      transform: none;
+    }
+
+    96%,
+    100% {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
+
+  /* 29 characters, revealed between 4% and 27% of the cycle. */
+  @keyframes zt-type {
+    0%,
+    4% {
+      clip-path: inset(0% 100% 0% 0%);
+    }
+
+    27%,
+    100% {
+      clip-path: inset(0% 0% 0% 0%);
+    }
+  }
+
+  @keyframes zt-caret-move {
+    0%,
+    4% {
+      left: 0;
+    }
+
+    27%,
+    100% {
+      left: 100%;
+    }
+  }
+
+  @keyframes zt-caret-hide {
+    0%,
+    29% {
+      opacity: 1;
+    }
+
+    30%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes zt-answer {
+    0%,
+    31% {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    34%,
+    88% {
+      opacity: 1;
+      transform: none;
+    }
+
+    96%,
+    100% {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
+
+  @keyframes zt-dots-out {
+    0%,
+    43% {
+      opacity: 1;
+    }
+
+    44%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes zt-bubble-in {
+    0%,
+    43% {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+
+    47%,
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes zt-dot {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: translateY(0);
+    }
+
+    50% {
+      opacity: 1;
+      transform: translateY(-3px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .zt-ask,
+    .zt-answer,
+    .zt-typed-text,
+    .zt-typed::after,
+    .zt-bubble--app,
+    .zt-dots,
+    .zt-dots i {
+      animation: none;
+    }
+
+    .zt-typed-text {
+      clip-path: none;
+    }
+
+    .zt-typed::after,
+    .zt-dots {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,62 @@
+---
+/**
+ * What the adapter does, what it quietly ignores, and what it refuses.
+ * `status` maps to a dot: filled = works, half = accepted and ignored,
+ * hollow = throws NotImplementedError.
+ */
+interface Row {
+  name: string;
+  note: string;
+  status: "works" | "noop" | "throws";
+}
+// biome-ignore lint/correctness/noUnusedVariables: Astro template expressions are opaque to this rule; every binding below is rendered in the markup.
+const { rows = [] as Row[] } = Astro.props;
+// biome-ignore lint/correctness/noUnusedVariables: Astro template expressions are opaque to this rule; every binding below is rendered in the markup.
+const dot = {
+  noop: "lp-dot lp-dot--half",
+  throws: "lp-dot lp-dot--hollow",
+  works: "lp-dot",
+};
+// biome-ignore lint/correctness/noUnusedVariables: Astro template expressions are opaque to this rule; every binding below is rendered in the markup.
+const verdict = {
+  noop: "Accepted, does nothing",
+  throws: "Throws",
+  works: "Works",
+};
+---
+
+<table class="lp-ledger">
+  <thead>
+    <tr>
+      <th scope="col">Call</th>
+      <th scope="col">What happens</th>
+    </tr>
+  </thead>
+  <tbody>
+    {
+      rows.map((row) => (
+        <tr>
+          <td>
+            <span aria-hidden="true" class={dot[row.status]} />
+            {row.name}
+          </td>
+          <td>
+            <span class="sr-only">{verdict[row.status]}. </span>
+            {row.note}
+          </td>
+        </tr>
+      ))
+    }
+  </tbody>
+</table>
+
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+</style>
